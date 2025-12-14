@@ -1,8 +1,15 @@
-# 基于 Mui v7 + React Hook Form + Valibot 实现的使用 JSON Schema 驱动的动态表单组件
+# 
+<p align="center">
+  <img src="./龙.png" alt="logo" width="120" />
+</p>
 
-## SchemaForm 组件文档
+## Fastspace Schema Form 组件文档
+基于 JSON Schema 驱动的动态表单组件，支持验证、联动、计算字段等功能。(Mui v7 + React Hook Form + Valibot)
 
-基于 JSON Schema 驱动的动态表单组件，支持验证、联动、计算字段等功能。
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm latest package](https://img.shields.io/npm/v/@fastspace/schema-form/latest.svg)](https://www.npmjs.com/package/@fastspace/schema-form)
+[![npm downloads](https://img.shields.io/npm/dm/@fastspace/schema-form.svg)](https://www.npmjs.com/package/@fastspace/schema-form)
+[![GitHub branch status](https://img.shields.io/github/checks-status/PikachuGits/fastspace-schema-form/HEAD)](https://github.com/PikachuGits/fastspace-schema-form/commits/HEAD/)
 
 ## 目录
 
