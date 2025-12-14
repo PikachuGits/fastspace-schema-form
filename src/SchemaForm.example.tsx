@@ -1,6 +1,6 @@
 import { Button, Typography, Paper, Divider, Box, Card, CardContent } from "@mui/material";
 import { useRef, useState, useMemo, useCallback, useEffect, useLayoutEffect } from "react";
-import { SchemaForm, type SchemaInput, type SchemaFormInstance, type FieldSchema } from "@fastspace/schema-form";
+import { SchemaForm, type SchemaInput, type SchemaFormInstance, type FieldSchema } from "./index";
 
 // ============================================================================
 // 1. 基础表单示例

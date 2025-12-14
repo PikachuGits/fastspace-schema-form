@@ -6,8 +6,8 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [
     react(),
-    dts({ 
-      include: ['src'], 
+    dts({
+      include: ['src'],
       rollupTypes: true,
       tsconfigPath: './tsconfig.json'
     })
@@ -33,15 +33,16 @@ export default defineConfig({
         'valibot'
       ],
       output: {
+        exports: 'named',
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
           '@mui/material': 'MaterialUI',
           'react-hook-form': 'ReactHookForm',
-          'dayjs': 'dayjs',
-          'valibot': 'Valibot'
-        },
-      },
-    },
-  },
+          dayjs: 'dayjs',
+          valibot: 'Valibot'
+        }
+      }
+    }
+  }
 });

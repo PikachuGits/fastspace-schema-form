@@ -32,7 +32,6 @@ export type {
   ParsedSchema,
   // 表单实例
   SchemaFormInstance,
-  SchemaFormProps,
   // Schema 类型
   SchemaInput,
   SimpleCondition,
@@ -44,8 +43,7 @@ export type {
 } from "./types";
 
 // 主组件
-export { default, SchemaForm } from "./ui/SchemaForm";
-
+export { SchemaForm } from "./ui/SchemaForm";
 // 布局组件
 export { GridLayout, StackLayout } from "./ui/layout";
 export type { GridLayoutProps, StackLayoutProps } from "./ui/layout";
