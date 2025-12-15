@@ -1,4 +1,3 @@
-performance.mark("schemaform-start");
 import type React from 'react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { type FieldValues, FormProvider, useForm, useWatch } from 'react-hook-form';
@@ -43,16 +42,22 @@ async function loadFieldOptions(field: FieldSchema, values: ValuesMap): Promise<
 /** 异步选项加载 Hook */
 function useAsyncOptions(fields: FieldSchema[], values: ValuesMap): Record<string, OptionItem[]> {
   const [optionsMap, setOptionsMap] = useState<Record<string, OptionItem[]>>({});
-  // 记录上一次的值，用于比对依赖是否变化
-  const prevValuesRef = useRef<ValuesMap>({});
-  // 记录是否已完成初始化加载
-  const initialLoadDoneRef = useRef(false);
 
-  // 初始化静态选项 & 重置状态
+  // 记录每个字段上一次请求时的依赖值快照
+  // Key: fieldName, Value: { [depName]: value }
+  const prevDepsRef = useRef<Record<string, Record<string, unknown>>>({});
+
+  // 记录哪些字段已经发起过初始化请求（主要针对无依赖字段，或者首次加载）
+  const initializedFieldsRef = useRef<Set<string>>(new Set());
+
+  // 记录每个字段的请求 ID，用于解决竞态问题
+  const requestIdsRef = useRef<Record<string, number>>({});
+
+  // 当 fields 变化（Schema 变化）时，重置状态
   useEffect(() => {
-    // 当 fields 变化（Schema 变化）时，重置状态
-    initialLoadDoneRef.current = false;
-    prevValuesRef.current = {};
+    initializedFieldsRef.current.clear();
+    prevDepsRef.current = {};
+    requestIdsRef.current = {};
 
     const initial: Record<string, OptionItem[]> = {};
     for (const field of fields) {
@@ -63,61 +68,77 @@ function useAsyncOptions(fields: FieldSchema[], values: ValuesMap): Record<strin
 
   // 加载异步选项
   useEffect(() => {
-    let active = true;
+    fields.forEach(async (field) => {
+      // 只有配置了 optionRequest 的字段才需要处理
+      if (!field.ui?.optionRequest) return;
 
-    const checkAndLoad = async () => {
-      const prevValues = prevValuesRef.current;
-      const currentValuesSnapshot = { ...values }; // 捕获当前值
+      const fieldName = field.name as string;
+      const deps = field.dependencies || [];
 
-      for (const field of fields) {
-        // 只有配置了 optionRequest 的字段才需要处理
-        if (!field.ui?.optionRequest) continue;
+      let shouldLoad = false;
 
-        let shouldLoad = false;
-        const deps = field.dependencies;
+      // 获取当前依赖值快照
+      const currentDepsSnapshot: Record<string, unknown> = {};
+      deps.forEach((dep) => {
+        currentDepsSnapshot[dep] = values[dep];
+      });
 
-        // 策略：
-        // 1. 如果没有显式定义 dependencies，则只在初始化时加载一次（防止每次表单变动都请求）
-        // 2. 如果定义了 dependencies，则检查依赖值是否变化
-        if (!deps || deps.length === 0) {
-          if (!initialLoadDoneRef.current) {
-            shouldLoad = true;
-          }
-        } else {
-          // 检查依赖值变更
-          const isChanged = deps.some((dep) => values[dep] !== prevValues[dep]);
-          // 如果依赖变了，或者还没初始化过，则加载
-          if (isChanged || !initialLoadDoneRef.current) {
-            shouldLoad = true;
-          }
+      // 判断是否需要加载
+      if (deps.length === 0) {
+        // 无依赖字段：只在首次加载
+        if (!initializedFieldsRef.current.has(fieldName)) {
+          shouldLoad = true;
         }
-
-        if (shouldLoad) {
-          try {
-            const result = await loadFieldOptions(field, values);
-            if (!active) return;
-            if (result !== null) {
-              setOptionsMap((prev) => ({
-                ...prev,
-                [field.name as string]: result,
-              }));
-            }
-          } catch (error) {
-            console.error(`Failed to load options for field ${String(field.name)}`, error);
+      } else {
+        // 有依赖字段
+        if (!initializedFieldsRef.current.has(fieldName)) {
+          // 1. 首次加载
+          shouldLoad = true;
+        } else {
+          // 2. 依赖变化
+          const prevDeps = prevDepsRef.current[fieldName];
+          // 简单的浅比较
+          const isChanged = deps.some(
+            (dep) => currentDepsSnapshot[dep] !== prevDeps?.[dep],
+          );
+          if (isChanged) {
+            shouldLoad = true;
           }
         }
       }
 
-      // 更新引用
-      prevValuesRef.current = currentValuesSnapshot;
-      initialLoadDoneRef.current = true;
-    };
+      if (shouldLoad) {
+        // 标记为已初始化 & 更新快照 (在 await 之前同步执行，防止重复触发)
+        initializedFieldsRef.current.add(fieldName);
+        prevDepsRef.current[fieldName] = currentDepsSnapshot;
 
-    checkAndLoad();
+        // 生成新的请求 ID
+        const requestId = (requestIdsRef.current[fieldName] || 0) + 1;
+        requestIdsRef.current[fieldName] = requestId;
 
-    return () => {
-      active = false;
-    };
+        try {
+          const result = await loadFieldOptions(field, values);
+
+          // 竞态检查：只有当 requestId 匹配时才更新
+          if (requestIdsRef.current[fieldName] === requestId) {
+            if (result !== null) {
+              setOptionsMap((prev) => ({
+                ...prev,
+                [fieldName]: result,
+              }));
+            }
+          }
+        } catch (error) {
+          // 同样可以加竞态检查，避免旧错误的干扰（可选）
+          if (requestIdsRef.current[fieldName] === requestId) {
+            console.error(
+              `Failed to load options for field ${String(field.name)}`,
+              error,
+            );
+          }
+        }
+      }
+    });
   }, [fields, values]);
 
   return optionsMap;
@@ -165,18 +186,7 @@ function SchemaFormInner<T extends FieldValues>(props: SchemaFormProps<T>, ref: 
   // }, []);
   // 解析 Schema
   const parsed = useMemo(() => {
-    performance.mark("schema-parse-start");
     const result = parseSchema(schema);
-    performance.mark("schema-parse-end");
-
-    performance.measure(
-      "schema-parse",
-      "schema-parse-start",
-      "schema-parse-end"
-    );
-    // const [entry] = performance.getEntriesByName("schema-parse");
-    // console.log("🧩 schema-parse 耗时:", entry?.duration.toFixed(2), "ms");
-
     return result;
   }, [schema]);
 
@@ -214,9 +224,9 @@ function SchemaFormInner<T extends FieldValues>(props: SchemaFormProps<T>, ref: 
   const watchFields = useMemo(() => getWatchFields(parsed), [parsed]);
 
   // Debug log
-  useEffect(() => {
-    console.log('👀 watchFields:', watchFields);
-  }, [watchFields]);
+  // useEffect(() => {
+  //   console.log('👀 watchFields:', watchFields);
+  // }, [watchFields]);
 
   // 2. 只订阅这些字段
   const watchedValues = useWatch({
@@ -269,7 +279,7 @@ function SchemaFormInner<T extends FieldValues>(props: SchemaFormProps<T>, ref: 
           const currentVal = methods.getValues(field.name as any);
           // 如果当前有值（非空），则清空
           if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
-            console.log(`🧹 Auto-resetting field ${String(field.name)} due to dependency change`);
+            // console.log(`🧹 Auto-resetting field ${String(field.name)} due to dependency change`);
             updates[field.name as string] = null; // 或者 undefined，视具体需求而定
             hasUpdates = true;
           }
