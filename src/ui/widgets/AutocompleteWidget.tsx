@@ -1,32 +1,40 @@
-import { Autocomplete, CircularProgress, FormControl, TextField, styled, Box, Typography } from '@mui/material';
-import { useCallback, useEffect, useState, forwardRef, useRef } from 'react';
-import type { OptionItem, WidgetComponent } from '../../types';
-import { compactFieldStyles } from './styles';
+import {
+  Autocomplete,
+  CircularProgress,
+  FormControl,
+  TextField,
+  styled,
+  Box,
+  Typography,
+} from "@mui/material";
+import { useCallback, useEffect, useState, forwardRef, useRef } from "react";
+import type { OptionItem, WidgetComponent } from "../../types";
+import { compactFieldStyles } from "./styles";
 
-const StyledUl = styled('ul')(({ theme }) => ({
+const StyledUl = styled("ul")(({ theme }) => ({
   padding: theme.spacing(0.5),
   margin: 0,
-  listStyle: 'none',
+  listStyle: "none",
   maxHeight: 260,
-  overflow: 'auto',
+  overflow: "auto",
 
   /* 所有 option（即 children） */
-  '& .MuiAutocomplete-option': {
+  "& .MuiAutocomplete-option": {
     minHeight: 36,
     padding: theme.spacing(0.75, 1.5),
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: theme.spacing(1),
     fontSize: 14,
     borderRadius: theme.shape.borderRadius,
-    cursor: 'pointer',
+    cursor: "pointer",
 
-    transition: theme.transitions.create(['background-color'], {
+    transition: theme.transitions.create(["background-color"], {
       duration: theme.transitions.duration.shortest,
     }),
 
     /* hover */
-    '&:hover': {
+    "&:hover": {
       backgroundColor: theme.palette.action.hover,
     },
 
@@ -38,18 +46,19 @@ const StyledUl = styled('ul')(({ theme }) => ({
     /* 禁用态 */
     '&[aria-disabled="true"]': {
       opacity: 0.5,
-      cursor: 'not-allowed',
+      cursor: "not-allowed",
     },
   },
 
   /* 你自己加的状态行（loading / empty / error） */
-  '& .MuiAutocomplete-listboxStatus': {
-    cursor: 'default',
-    pointerEvents: 'none',
+  "& .MuiAutocomplete-listboxStatus": {
+    cursor: "default",
+    pointerEvents: "none",
   },
 }));
 
-export interface InfiniteListboxProps extends React.HTMLAttributes<HTMLElement> {
+export interface InfiniteListboxProps
+  extends React.HTMLAttributes<HTMLElement> {
   fetchingMore?: boolean;
   hasMore?: boolean;
   showNoMore?: boolean;
@@ -58,7 +67,10 @@ export interface InfiniteListboxProps extends React.HTMLAttributes<HTMLElement> 
 }
 
 // 更加完善的列表组件，支持三态设计与 MUI 样式对齐
-const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListboxProps>((props, ref) => {
+const InfiniteAutocompleteListbox = forwardRef<
+  HTMLUListElement,
+  InfiniteListboxProps
+>((props, ref) => {
   const {
     children,
     fetchingMore,
@@ -78,7 +90,12 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
         <Box
           component="li"
           className="MuiAutocomplete-option MuiAutocomplete-listboxStatus"
-          sx={{ py: 2, justifyContent: 'center', pointerEvents: 'none', cursor: 'default' }}
+          sx={{
+            py: 2,
+            justifyContent: "center",
+            pointerEvents: "none",
+            cursor: "default",
+          }}
         >
           <Typography variant="body2" color="text.secondary">
             暂无数据
@@ -91,11 +108,15 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
         <Box
           component="li"
           className="MuiAutocomplete-option MuiAutocomplete-listboxStatus"
-          sx={{ py: 2, color: 'error.main', justifyContent: 'center', pointerEvents: 'none', cursor: 'default' }}
+          sx={{
+            py: 2,
+            color: "error.main",
+            justifyContent: "center",
+            pointerEvents: "none",
+            cursor: "default",
+          }}
         >
-          <Typography variant="body2">
-            加载失败，请重试
-          </Typography>
+          <Typography variant="body2">加载失败，请重试</Typography>
         </Box>
       )}
 
@@ -104,12 +125,19 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
         <Box
           component="li"
           className="MuiAutocomplete-option MuiAutocomplete-listboxStatus"
-          sx={{ py: 1.5, gap: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: 'text.secondary', cursor: 'default' }}
+          sx={{
+            py: 1.5,
+            gap: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            color: "text.secondary",
+            cursor: "default",
+          }}
         >
           <CircularProgress size={16} color="inherit" />
-          <Typography variant="body2">
-            加载中…
-          </Typography>
+          <Typography variant="body2">加载中…</Typography>
         </Box>
       )}
 
@@ -118,7 +146,12 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
         <Box
           component="li"
           className="MuiAutocomplete-option MuiAutocomplete-listboxStatus"
-          sx={{ py: 1.5, justifyContent: 'center', pointerEvents: 'none', cursor: 'default' }}
+          sx={{
+            py: 1.5,
+            justifyContent: "center",
+            pointerEvents: "none",
+            cursor: "default",
+          }}
         >
           <Typography variant="caption" color="text.disabled">
             没有更多数据了
@@ -128,6 +161,9 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
     </StyledUl>
   );
 });
+
+/** 初始化状态枚举 */
+type InitState = "idle" | "fetching" | "ready";
 
 /** 自动完成（支持多选、远程搜索、分页） */
 export const AutocompleteWidget: WidgetComponent = ({
@@ -141,7 +177,12 @@ export const AutocompleteWidget: WidgetComponent = ({
   schema,
 }) => {
   // 从 fieldProps 中提取用户自定义的 onChange 和 multiple
-  const { onChange: userOnChange, multiple = false, loading: userLoading, ...restFieldProps } = fieldProps ?? {};
+  const {
+    onChange: userOnChange,
+    multiple = false,
+    loading: userLoading,
+    ...restFieldProps
+  } = fieldProps ?? {};
 
   // 远程配置
   const remoteConfig = schema?.ui?.remoteConfig;
@@ -152,10 +193,19 @@ export const AutocompleteWidget: WidgetComponent = ({
   const [localOptions, setLocalOptions] = useState<OptionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false); // 专门用于控制滚动加载的状态
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  // 初始化状态：'idle' -> 'fetching' -> 'ready'
+  // 用于追踪默认值回显是否完成，避免打开下拉时的闪烁
+  const [initState, setInitState] = useState<InitState>("idle");
+
+  // 记录初始 field.value，用于判断是否需要 fetchById
+  const initialValueRef = useRef(field.value);
+  // 标记是否是首次打开（用于优化首次打开不触发搜索）
+  const hasOpenedOnceRef = useRef(false);
 
   // 如果有远程配置，优先使用本地 options
   const currentOptions = remoteConfig ? localOptions : options;
@@ -168,19 +218,25 @@ export const AutocompleteWidget: WidgetComponent = ({
   // 更新 selectedOptionsRef
   useEffect(() => {
     if (!remoteConfig) return;
-    const values = Array.isArray(field.value) ? field.value : (field.value ? [field.value] : []);
+    const values = Array.isArray(field.value)
+      ? field.value
+      : field.value
+      ? [field.value]
+      : [];
     if (values.length === 0) return;
 
     // 从 localOptions 中找到当前选中的 items 并合并到 ref
     // 注意：这里我们不直接替换，而是合并，因为 localOptions 可能会变（比如被搜索结果覆盖）
-    const currentSelected = localOptions.filter(o => values.includes(o.value));
+    const currentSelected = localOptions.filter((o) =>
+      values.includes(o.value)
+    );
 
     // 将新找到的 selected items 合并到 ref (去重)
     const newSelected = [...selectedOptionsRef.current];
     let changed = false;
-    currentSelected.forEach(item => {
+    currentSelected.forEach((item) => {
       // eslint-disable-next-line eqeqeq
-      if (!newSelected.some(s => s.value == item.value)) {
+      if (!newSelected.some((s) => s.value == item.value)) {
         newSelected.push(item);
         changed = true;
       }
@@ -192,39 +248,71 @@ export const AutocompleteWidget: WidgetComponent = ({
   }, [field.value, localOptions, remoteConfig]);
 
   // 回显逻辑：如果 field.value 有值，但 options 中没有，尝试通过 fetchById 获取
+  // 这个 effect 只在初始化时运行一次
   useEffect(() => {
     const config = remoteConfigRef.current;
-    if (!config?.fetchById || !field.value) return;
+    const initialValue = initialValueRef.current;
 
-    const values = Array.isArray(field.value) ? field.value : [field.value];
-    const missingValues = values.filter(
-      // 使用宽松比较 (==) 以兼容 string/number 差异
-      // eslint-disable-next-line eqeqeq
-      (v) => !localOptions.some((o) => o.value == v)
-    );
+    // 非远程模式或没有 fetchById，直接标记为 ready
+    if (!config?.fetchById) {
+      setInitState("ready");
+      return;
+    }
 
-    if (missingValues.length === 0) return;
+    // 如果没有初始值，直接标记为 ready
+    if (
+      initialValue === undefined ||
+      initialValue === null ||
+      (Array.isArray(initialValue) && initialValue.length === 0)
+    ) {
+      setInitState("ready");
+      return;
+    }
 
-    // 逐个获取缺失的选项 (可以优化为批量获取，如果 API 支持)
-    missingValues.forEach(async (v) => {
+    const values = Array.isArray(initialValue) ? initialValue : [initialValue];
+
+    // 开始获取
+    setInitState("fetching");
+
+    // 使用 Promise.all 并行获取所有缺失的选项
+    const fetchPromises = values.map(async (v) => {
       try {
         const item = await config.fetchById!(v);
-        if (item) {
-          setLocalOptions((prev) => {
-            // 防止重复添加 (宽松比较)
-            // eslint-disable-next-line eqeqeq
-            if (prev.some((o) => o.value == item.value)) return prev;
-            return [...prev, item];
-          });
-          // 同时更新 ref
-          selectedOptionsRef.current.push(item);
-        }
+        return item;
       } catch (err) {
         console.error(`Failed to fetch option for value ${v}:`, err);
+        return null;
       }
     });
-    // 依赖中移除 remoteConfig，避免因内联对象导致的无限循环
-  }, [field.value, localOptions]);
+
+    Promise.all(fetchPromises).then((items) => {
+      const validItems = items.filter(
+        (item): item is OptionItem => item !== null
+      );
+      if (validItems.length > 0) {
+        setLocalOptions((prev) => {
+          const newOptions = [...prev];
+          validItems.forEach((item) => {
+            // eslint-disable-next-line eqeqeq
+            if (!newOptions.some((o) => o.value == item.value)) {
+              newOptions.push(item);
+            }
+          });
+          return newOptions;
+        });
+        // 更新 selectedOptionsRef
+        validItems.forEach((item) => {
+          // eslint-disable-next-line eqeqeq
+          if (!selectedOptionsRef.current.some((s) => s.value == item.value)) {
+            selectedOptionsRef.current.push(item);
+          }
+        });
+      }
+      setInitState("ready");
+    });
+    // 只在挂载时运行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 远程加载函数
   const fetchOptions = useCallback(
@@ -251,7 +339,8 @@ export const AutocompleteWidget: WidgetComponent = ({
           setLocalOptions((prev) => {
             // 过滤重复项
             const newItems = res.data.filter(
-              newItem => !prev.some(prevItem => prevItem.value === newItem.value)
+              (newItem) =>
+                !prev.some((prevItem) => prevItem.value === newItem.value)
             );
             return [...prev, ...newItems];
           });
@@ -260,17 +349,21 @@ export const AutocompleteWidget: WidgetComponent = ({
           const newOptions = [...res.data];
 
           // 把 ref 中记录的选中项合并进去 (如果不在搜索结果中)
-          const currentValues = Array.isArray(field.value) ? field.value : (field.value ? [field.value] : []);
+          const currentValues = Array.isArray(field.value)
+            ? field.value
+            : field.value
+            ? [field.value]
+            : [];
 
           // 从 ref 中找当前真正被选中的项 (过滤掉 ref 中可能过期的)
           const activeSelectedItems = selectedOptionsRef.current.filter(
             // eslint-disable-next-line eqeqeq
-            o => currentValues.includes(o.value)
+            (o) => currentValues.includes(o.value)
           );
 
-          activeSelectedItems.forEach(selectedItem => {
+          activeSelectedItems.forEach((selectedItem) => {
             // eslint-disable-next-line eqeqeq
-            if (!newOptions.some(o => o.value == selectedItem.value)) {
+            if (!newOptions.some((o) => o.value == selectedItem.value)) {
               newOptions.push(selectedItem);
             }
           });
@@ -279,7 +372,7 @@ export const AutocompleteWidget: WidgetComponent = ({
         }
         setHasMore(res.hasMore);
       } catch (err) {
-        console.error('Failed to fetch options:', err);
+        console.error("Failed to fetch options:", err);
       } finally {
         if (isLoadMore) {
           setFetchingMore(false);
@@ -295,35 +388,60 @@ export const AutocompleteWidget: WidgetComponent = ({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 监听 open 变化，实现"关闭再展开刷新"
+  // 关键优化：初始化未完成时不触发搜索，首次打开时如果已有选中项则不立即搜索
   useEffect(() => {
-    if (open && remoteConfig) {
-      // 只有当 options 为空或者 inputValue 为空时才触发搜索
-      // 或者：如果 inputValue 等于当前选中项的 label，说明用户只是点开了，想看列表，而不是想搜这个 label
-      // 我们判断 inputValue 是否等于某个选中项的 label
+    if (!open || !remoteConfig) return;
 
-      const isSelectedLabel = localOptions.some(o => o.label === inputValue && field.value === o.value);
-      // 如果是多选，inputValue 为空时才搜空；如果 inputValue 有值且不是 label，才搜值
-      // 简单策略：如果 inputValue 为空，搜空；如果 inputValue 等于选中项 label (单选场景)，搜空
+    // 初始化未完成，等待 fetchById 完成
+    if (initState !== "ready") return;
 
-      let keyword = inputValue;
-      // 单选且有值且输入框内容等于选中项 label
-      if (!multiple && field.value && isSelectedLabel) {
-        keyword = '';
-      }
+    // 首次打开且已有选中项时，不立即触发搜索（避免闪烁）
+    // 但如果 localOptions 为空（说明没有可展示的数据），还是需要搜索
+    const hasSelectedValue =
+      field.value !== undefined &&
+      field.value !== null &&
+      !(Array.isArray(field.value) && field.value.length === 0);
 
-      fetchOptions(keyword, 1, false);
+    if (
+      !hasOpenedOnceRef.current &&
+      hasSelectedValue &&
+      localOptions.length > 0
+    ) {
+      // 首次打开且有选中项且有数据，跳过搜索
+      hasOpenedOnceRef.current = true;
+      return;
     }
-  }, [open]); // 只依赖 open
+
+    hasOpenedOnceRef.current = true;
+
+    // 判断 inputValue 是否等于某个选中项的 label
+    const isSelectedLabel = localOptions.some(
+      (o) => o.label === inputValue && field.value === o.value
+    );
+
+    let keyword = inputValue;
+    // 单选且有值且输入框内容等于选中项 label
+    if (!multiple && field.value && isSelectedLabel) {
+      keyword = "";
+    }
+
+    fetchOptions(keyword, 1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initState]); // 依赖 open 和 initState
 
   // 处理输入变化
-  const handleInputChange = (event: React.SyntheticEvent, newInputValue: string, reason: string) => {
+  const handleInputChange = (
+    event: React.SyntheticEvent,
+    newInputValue: string,
+    reason: string
+  ) => {
     // 只有在用户输入(input)或清除(clear)时才更新 inputValue
     // 防止 select/reset 等操作导致 inputValue 意外变化 (比如选中后重置为 label)
     // 但注意：MUI Autocomplete 在选中后会将 inputValue 重置为 label，这是符合预期的 (单选时)
     // 用户的问题是 "搜索列表更新后就通过更新我的输入框" -> 这通常发生在 reset
 
     // 如果是 reset (比如 options 变化导致重新匹配 label)，且用户正在输入(open=true)，则不更新
-    if (reason === 'reset' && open) {
+    if (reason === "reset" && open) {
       return;
     }
 
@@ -337,7 +455,7 @@ export const AutocompleteWidget: WidgetComponent = ({
     }
 
     // 只有在用户输入(input)或清除(clear)时才触发搜索
-    if (reason === 'input' || reason === 'clear') {
+    if (reason === "input" || reason === "clear") {
       debounceRef.current = setTimeout(() => {
         fetchOptions(newInputValue, 1, false);
       }, remoteConfig.debounceTimeout ?? 500);
@@ -360,7 +478,8 @@ export const AutocompleteWidget: WidgetComponent = ({
       !loading &&
       !fetchingMore &&
       hasMore &&
-      listboxNode.scrollTop + listboxNode.clientHeight >= listboxNode.scrollHeight - 20
+      listboxNode.scrollTop + listboxNode.clientHeight >=
+        listboxNode.scrollHeight - 20
     ) {
       const nextPage = page + 1;
       setPage(nextPage);
@@ -390,7 +509,9 @@ export const AutocompleteWidget: WidgetComponent = ({
         filterOptions={remoteConfig ? (x) => x : undefined} // 远程模式禁用客户端过滤
         value={
           multiple
-            ? currentOptions.filter((o) => (field.value ?? []).includes(o.value))
+            ? currentOptions.filter((o) =>
+                (field.value ?? []).includes(o.value)
+              )
             : currentOptions.find((o) => o.value === field.value) ?? null
         }
         onChange={(event, v) => {
@@ -400,7 +521,7 @@ export const AutocompleteWidget: WidgetComponent = ({
 
           field.onChange(nextValue);
 
-          if (typeof userOnChange === 'function') {
+          if (typeof userOnChange === "function") {
             userOnChange(event, v as OptionItem | OptionItem[] | null);
           }
           form?.trigger(field.name);
@@ -415,45 +536,45 @@ export const AutocompleteWidget: WidgetComponent = ({
             // 传递自定义属性给 ListboxComponent (仅在远程模式下传递)
             ...(remoteConfig
               ? {
-                fetchingMore,
-                hasMore,
-                showNoMore: localOptions.length > 0,
-                empty: localOptions.length === 0 && !loading && !fetchingMore,
-                error: false,
-              }
+                  fetchingMore,
+                  hasMore,
+                  showNoMore: localOptions.length > 0,
+                  empty: localOptions.length === 0 && !loading && !fetchingMore,
+                  error: false,
+                }
               : {}),
           } as any,
           chip: {
-            size: 'small',
-            variant: 'outlined',
+            size: "small",
+            variant: "outlined",
             sx: {
               height: 22,
               fontSize: 12,
               borderRadius: 1,
-              backgroundColor: 'background.paper',
+              backgroundColor: "background.paper",
 
-              '& .MuiChip-label': {
+              "& .MuiChip-label": {
                 px: 0.75,
               },
 
-              '& .MuiChip-deleteIcon': {
+              "& .MuiChip-deleteIcon": {
                 fontSize: 16,
                 marginRight: 0.25,
               },
             },
           },
         }}
-        getOptionLabel={(o) => o?.label ?? ''}
+        getOptionLabel={(o) => o?.label ?? ""}
         getOptionKey={(o) => {
           const k = o?.key ?? o?.value;
-          return (typeof k === 'string' || typeof k === 'number') ? k : String(k);
+          return typeof k === "string" || typeof k === "number" ? k : String(k);
         }}
         isOptionEqualToValue={(opt, val) => opt?.value === val?.value}
         size="small"
         disabled={restFieldProps?.disabled}
         renderOption={(props, option) => {
           return (
-            <li {...props} key={option.key ?? option.value as any}>
+            <li {...props} key={option.key ?? (option.value as any)}>
               {option.listLabel ?? option.label}
             </li>
           );
@@ -477,7 +598,9 @@ export const AutocompleteWidget: WidgetComponent = ({
                 ...params.InputProps,
                 endAdornment: (
                   <>
-                    {(loading || userLoading) ? <CircularProgress color="inherit" size={20} /> : null}
+                    {loading || userLoading ? (
+                      <CircularProgress color="inherit" size={20} />
+                    ) : null}
                     {params.InputProps.endAdornment}
                   </>
                 ),
