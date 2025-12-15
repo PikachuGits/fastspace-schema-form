@@ -157,6 +157,7 @@ function FieldRendererInner<T extends FieldValues = FieldValues>({
             field={rhfField as WidgetProps['field']}
             fieldProps={{
               ...field.ui?.props,
+              ...field.fieldProps,
               disabled: state.disabled,
               required: state.required,
               readOnly: state.readonly,

@@ -202,8 +202,8 @@ export const AutocompleteWidget: WidgetComponent = ({
     const values = Array.isArray(field.value)
       ? field.value
       : field.value
-      ? [field.value]
-      : [];
+        ? [field.value]
+        : [];
     if (values.length === 0) return;
 
     const currentSelected = localOptions.filter((o) =>
@@ -308,8 +308,8 @@ export const AutocompleteWidget: WidgetComponent = ({
           const currentValues = Array.isArray(field.value)
             ? field.value
             : field.value
-            ? [field.value]
-            : [];
+              ? [field.value]
+              : [];
 
           const activeSelectedItems = selectedOptionsRef.current.filter((o) =>
             currentValues.includes(o.value)
@@ -422,7 +422,7 @@ export const AutocompleteWidget: WidgetComponent = ({
       !fetchingMore &&
       hasMore &&
       listboxNode.scrollTop + listboxNode.clientHeight >=
-        listboxNode.scrollHeight - 20
+      listboxNode.scrollHeight - 20
     ) {
       const nextPage = page + 1;
       setPage(nextPage);
@@ -477,7 +477,9 @@ export const AutocompleteWidget: WidgetComponent = ({
           }
 
           if (typeof userOnChange === "function") {
-            userOnChange(event, v as OptionItem | OptionItem[] | null);
+            // 注意：MUI Autocomplete 的 onChange 第二个参数是选中的 OptionItem 或 OptionItem[]
+            // 但这里我们需要确保类型安全，并传递正确的数据
+            userOnChange(event, v);
           }
           form?.trigger(field.name);
         }}
@@ -490,12 +492,12 @@ export const AutocompleteWidget: WidgetComponent = ({
             style: { maxHeight: 260 },
             ...(remoteConfig
               ? {
-                  fetchingMore,
-                  hasMore,
-                  showNoMore: localOptions.length > 0,
-                  empty: localOptions.length === 0 && !loading && !fetchingMore,
-                  error: false,
-                }
+                fetchingMore,
+                hasMore,
+                showNoMore: localOptions.length > 0,
+                empty: localOptions.length === 0 && !loading && !fetchingMore,
+                error: false,
+              }
               : {}),
           } as any,
           chip: {

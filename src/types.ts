@@ -228,6 +228,9 @@ export type FieldSchema<T extends FieldValues = FieldValues> = {
   // ============ 依赖配置 ============
   /** 依赖字段（用于触发重新计算/校验） */
   dependencies?: string[];
+
+  /** 组件透传属性 (快捷方式，等同于 ui.props) */
+  fieldProps?: Record<string, unknown>;
 };
 
 // ============================================================================
