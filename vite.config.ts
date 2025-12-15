@@ -12,6 +12,9 @@ export default defineConfig({
       tsconfigPath: './tsconfig.json'
     })
   ],
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     lib: {
       entry: resolve('src/index.tsx'),
@@ -29,8 +32,13 @@ export default defineConfig({
         '@emotion/styled',
         'react-hook-form',
         '@hookform/resolvers',
+        '@mui/x-date-pickers/AdapterDayjs',
+        '@mui/x-date-pickers/DatePicker',
+        '@mui/x-date-pickers/TimePicker',
+        '@mui/x-date-pickers/DateTimePicker',
         '@mui/x-date-pickers',
         'dayjs',
+        'dayjs/locale/zh-cn',
         'valibot'
       ],
       output: {
