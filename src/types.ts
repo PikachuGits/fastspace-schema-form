@@ -76,6 +76,10 @@ export type OptionItem = {
   label: string;
   value: string | number | boolean | null;
   disabled?: boolean;
+  /** 唯一标识 (解决 label 重复问题) */
+  key?: string | number;
+  /** 列表展示文本 (允许与选中后回显的 label 不一致) */
+  listLabel?: React.ReactNode;
   [key: string]: unknown;
 };
 

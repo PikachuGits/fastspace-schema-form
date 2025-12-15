@@ -145,6 +145,8 @@ export const AutocompleteWidget: WidgetComponent = ({
 
   // 远程配置
   const remoteConfig = schema?.ui?.remoteConfig;
+  const remoteConfigRef = useRef(remoteConfig);
+  remoteConfigRef.current = remoteConfig;
 
   // 本地状态（用于远程模式）
   const [localOptions, setLocalOptions] = useState<OptionItem[]>([]);
@@ -159,13 +161,46 @@ export const AutocompleteWidget: WidgetComponent = ({
   const currentOptions = remoteConfig ? localOptions : options;
   const pageSize = remoteConfig?.pageSize ?? 20;
 
+  // 记录当前选中的 options，防止搜索时丢失回显
+  // 使用 ref 避免作为依赖项
+  const selectedOptionsRef = useRef<OptionItem[]>([]);
+
+  // 更新 selectedOptionsRef
+  useEffect(() => {
+    if (!remoteConfig) return;
+    const values = Array.isArray(field.value) ? field.value : (field.value ? [field.value] : []);
+    if (values.length === 0) return;
+
+    // 从 localOptions 中找到当前选中的 items 并合并到 ref
+    // 注意：这里我们不直接替换，而是合并，因为 localOptions 可能会变（比如被搜索结果覆盖）
+    const currentSelected = localOptions.filter(o => values.includes(o.value));
+
+    // 将新找到的 selected items 合并到 ref (去重)
+    const newSelected = [...selectedOptionsRef.current];
+    let changed = false;
+    currentSelected.forEach(item => {
+      // eslint-disable-next-line eqeqeq
+      if (!newSelected.some(s => s.value == item.value)) {
+        newSelected.push(item);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      selectedOptionsRef.current = newSelected;
+    }
+  }, [field.value, localOptions, remoteConfig]);
+
   // 回显逻辑：如果 field.value 有值，但 options 中没有，尝试通过 fetchById 获取
   useEffect(() => {
-    if (!remoteConfig?.fetchById || !field.value) return;
+    const config = remoteConfigRef.current;
+    if (!config?.fetchById || !field.value) return;
 
     const values = Array.isArray(field.value) ? field.value : [field.value];
     const missingValues = values.filter(
-      (v) => !localOptions.some((o) => o.value === v)
+      // 使用宽松比较 (==) 以兼容 string/number 差异
+      // eslint-disable-next-line eqeqeq
+      (v) => !localOptions.some((o) => o.value == v)
     );
 
     if (missingValues.length === 0) return;
@@ -173,19 +208,23 @@ export const AutocompleteWidget: WidgetComponent = ({
     // 逐个获取缺失的选项 (可以优化为批量获取，如果 API 支持)
     missingValues.forEach(async (v) => {
       try {
-        const item = await remoteConfig.fetchById!(v);
+        const item = await config.fetchById!(v);
         if (item) {
           setLocalOptions((prev) => {
-            // 防止重复添加
-            if (prev.some((o) => o.value === item.value)) return prev;
+            // 防止重复添加 (宽松比较)
+            // eslint-disable-next-line eqeqeq
+            if (prev.some((o) => o.value == item.value)) return prev;
             return [...prev, item];
           });
+          // 同时更新 ref
+          selectedOptionsRef.current.push(item);
         }
       } catch (err) {
         console.error(`Failed to fetch option for value ${v}:`, err);
       }
     });
-  }, [field.value, remoteConfig, localOptions]);
+    // 依赖中移除 remoteConfig，避免因内联对象导致的无限循环
+  }, [field.value, localOptions]);
 
   // 远程加载函数
   const fetchOptions = useCallback(
@@ -217,7 +256,26 @@ export const AutocompleteWidget: WidgetComponent = ({
             return [...prev, ...newItems];
           });
         } else {
-          setLocalOptions(res.data);
+          // 搜索结果回来后，要合并当前选中的项，防止回显丢失
+          const newOptions = [...res.data];
+
+          // 把 ref 中记录的选中项合并进去 (如果不在搜索结果中)
+          const currentValues = Array.isArray(field.value) ? field.value : (field.value ? [field.value] : []);
+
+          // 从 ref 中找当前真正被选中的项 (过滤掉 ref 中可能过期的)
+          const activeSelectedItems = selectedOptionsRef.current.filter(
+            // eslint-disable-next-line eqeqeq
+            o => currentValues.includes(o.value)
+          );
+
+          activeSelectedItems.forEach(selectedItem => {
+            // eslint-disable-next-line eqeqeq
+            if (!newOptions.some(o => o.value == selectedItem.value)) {
+              newOptions.push(selectedItem);
+            }
+          });
+
+          setLocalOptions(newOptions);
         }
         setHasMore(res.hasMore);
       } catch (err) {
@@ -231,7 +289,7 @@ export const AutocompleteWidget: WidgetComponent = ({
         remoteConfig.onLoadingChange?.(false);
       }
     },
-    [remoteConfig, pageSize]
+    [remoteConfig, pageSize, field.value] // 添加 field.value 依赖，确保 fetchOptions 内部能获取最新 value
   );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -239,13 +297,36 @@ export const AutocompleteWidget: WidgetComponent = ({
   // 监听 open 变化，实现"关闭再展开刷新"
   useEffect(() => {
     if (open && remoteConfig) {
-      // 打开时立即触发一次搜索（使用当前输入值）
-      fetchOptions(inputValue, 1, false);
+      // 只有当 options 为空或者 inputValue 为空时才触发搜索
+      // 或者：如果 inputValue 等于当前选中项的 label，说明用户只是点开了，想看列表，而不是想搜这个 label
+      // 我们判断 inputValue 是否等于某个选中项的 label
+
+      const isSelectedLabel = localOptions.some(o => o.label === inputValue && field.value === o.value);
+      // 如果是多选，inputValue 为空时才搜空；如果 inputValue 有值且不是 label，才搜值
+      // 简单策略：如果 inputValue 为空，搜空；如果 inputValue 等于选中项 label (单选场景)，搜空
+
+      let keyword = inputValue;
+      // 单选且有值且输入框内容等于选中项 label
+      if (!multiple && field.value && isSelectedLabel) {
+        keyword = '';
+      }
+
+      fetchOptions(keyword, 1, false);
     }
-  }, [open]); // 只依赖 open，不依赖 inputValue
+  }, [open]); // 只依赖 open
 
   // 处理输入变化
   const handleInputChange = (event: React.SyntheticEvent, newInputValue: string, reason: string) => {
+    // 只有在用户输入(input)或清除(clear)时才更新 inputValue
+    // 防止 select/reset 等操作导致 inputValue 意外变化 (比如选中后重置为 label)
+    // 但注意：MUI Autocomplete 在选中后会将 inputValue 重置为 label，这是符合预期的 (单选时)
+    // 用户的问题是 "搜索列表更新后就通过更新我的输入框" -> 这通常发生在 reset
+
+    // 如果是 reset (比如 options 变化导致重新匹配 label)，且用户正在输入(open=true)，则不更新
+    if (reason === 'reset' && open) {
+      return;
+    }
+
     setInputValue(newInputValue);
 
     if (!remoteConfig) return;
@@ -256,7 +337,6 @@ export const AutocompleteWidget: WidgetComponent = ({
     }
 
     // 只有在用户输入(input)或清除(clear)时才触发搜索
-    // 避免 select 选中(reset)时触发搜索导致列表重置
     if (reason === 'input' || reason === 'clear') {
       debounceRef.current = setTimeout(() => {
         fetchOptions(newInputValue, 1, false);
@@ -364,9 +444,20 @@ export const AutocompleteWidget: WidgetComponent = ({
           },
         }}
         getOptionLabel={(o) => o?.label ?? ''}
+        getOptionKey={(o) => {
+          const k = o?.key ?? o?.value;
+          return (typeof k === 'string' || typeof k === 'number') ? k : String(k);
+        }}
         isOptionEqualToValue={(opt, val) => opt?.value === val?.value}
         size="small"
         disabled={restFieldProps?.disabled}
+        renderOption={(props, option) => {
+          return (
+            <li {...props} key={option.key ?? option.value as any}>
+              {option.listLabel ?? option.label}
+            </li>
+          );
+        }}
         renderInput={(params) => (
           <TextField
             {...params}

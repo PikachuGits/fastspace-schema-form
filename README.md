@@ -97,6 +97,79 @@ function App() {
 | `Switch` | 开关 | `boolean` |
 | `Radio` | 单选组 | `string \| number` |
 
+### 选项配置详解 (Select / Autocomplete)
+
+`OptionItem` 结构支持以下属性：
+
+```typescript
+type OptionItem = {
+  label: string;                  // 选中后输入框展示的文本
+  value: string | number | boolean | null; // 提交到表单的值
+  key?: string | number;          // [可选] 唯一标识 (当 value 不唯一或 label 重复时使用)
+  listLabel?: React.ReactNode;    // [可选] 下拉列表展示的内容 (可与 label 不一致)
+  disabled?: boolean;             // 是否禁用
+};
+```
+
+#### 场景 1：Label 重复导致 React Key 报错
+如果选项中存在相同的 `label` 或 `value`，请显式提供 `key`：
+
+```typescript
+{
+  label: '重复项',
+  value: 'dup_1',
+  key: 'unique_key_1'
+},
+{
+  label: '重复项',
+  value: 'dup_2',
+  key: 'unique_key_2'
+}
+```
+
+#### 场景 2：列表展示与选中展示不一致
+例如，列表中展示详细信息（如 "张三 (ID:001)"），选中后只展示姓名（"张三"）：
+
+```typescript
+{
+  label: '张三',                // 选中后展示
+  value: '001',
+  listLabel: (                  // 列表中展示
+    <div>
+      <strong>张三</strong>
+      <span style={{ color: '#999', fontSize: 12 }}> (ID: 001)</span>
+    </div>
+  )
+}
+```
+
+#### 场景 3：选中后触发额外操作
+可以在 `fieldProps` 中传入 `onChange` 回调：
+
+```typescript
+{
+  name: 'userSelect',
+  component: 'Select',
+  ui: {
+    label: '选择用户',
+    options: [
+      { label: 'User A', value: 'a' },
+      { label: 'User B', value: 'b' }
+    ]
+  },
+  fieldProps: {
+    // 这里的 onChange 会在表单值更新后触发
+    onChange: (event, option) => {
+      console.log('选中项:', option);
+      // 执行额外逻辑，例如：
+      // 1. 调用接口获取详情
+      // 2. 联动更新其他字段 (通过 form 实例)
+      // 3. 弹窗提示
+    }
+  }
+}
+```
+
 ### 日期时间组件
 
 | 组件名 | 说明 | 数据类型 |
@@ -804,11 +877,56 @@ const MyCustomInput = ({ field, form, values, label, error, helperText }) => {
 
 ---
 
-## 远程搜索与分页 (Autocomplete)
+## 自动完成 (Autocomplete)
 
-`Autocomplete` 组件支持远程搜索、分页加载、防抖搜索以及回显。
+`Autocomplete` 组件支持两种数据加载模式：**一次性加载**和**服务端搜索**。
 
-配置 `ui.remoteConfig` 即可开启远程模式。
+### 1. 一次性加载 (Static / Async)
+
+适用于数据量较小（如少于 1000 条），或者可以一次性加载所有选项的场景。
+
+**用法：**
+- **静态选项**：直接配置 `ui.options`。
+- **异步加载**：配置 `ui.optionRequest`，组件挂载时（或依赖变化时）会自动执行一次请求。
+
+**特点：**
+- 前端过滤：组件内置了基于输入的本地过滤功能。
+- 简单：无需处理分页、防抖等逻辑。
+
+```typescript
+// 示例：异步加载一次性数据
+{
+  name: 'userId',
+  component: 'Autocomplete',
+  ui: {
+    label: '选择用户',
+    // 方式 A: 静态数据
+    // options: [{ label: '张三', value: 1 }, { label: '李四', value: 2 }],
+    
+    // 方式 B: 异步一次性加载
+    optionRequest: async (values) => {
+      // 这里的 values 是当前表单的值，可用于联动
+      const users = await api.getAllUsers();
+      return users.map(u => ({ label: u.name, value: u.id }));
+    }
+  }
+}
+```
+
+### 2. 服务端搜索 (Remote Search)
+
+适用于数据量极大（如用户库、商品库），无法一次性加载，需要根据用户输入实时搜索的场景。
+
+**用法：**
+- 配置 `ui.remoteConfig`。
+
+**特点：**
+- 服务端过滤：每次输入都会发送请求给服务端。
+- 支持分页：滚动到底部自动加载下一页。
+- 支持防抖：内置防抖机制，减少请求频率。
+- 支持回显：通过 `fetchById` 解决默认值不在当前列表中的问题。
+
+> **注意**：如果配置了 `remoteConfig`，`ui.options` 和 `ui.optionRequest` 加载的数据将被忽略（除非作为初始值），组件将完全由 `remoteConfig` 接管数据流。
 
 ```typescript
 {

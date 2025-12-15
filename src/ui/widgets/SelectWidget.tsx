@@ -33,10 +33,21 @@ export const SelectWidget: WidgetComponent = ({ field, label, error, helperText,
           form?.trigger(field.name);
         }}
         getOptionLabel={(o) => o?.label ?? ''}
+        getOptionKey={(o) => {
+          const k = o?.key ?? o?.value;
+          return (typeof k === 'string' || typeof k === 'number') ? k : String(k);
+        }}
         isOptionEqualToValue={(opt, val) => opt?.value === val?.value}
         size="small"
         disabled={restFieldProps?.disabled}
         onClose={() => form?.trigger(field.name)}
+        renderOption={(props, option) => {
+          return (
+            <li {...props} key={option.key ?? option.value as any}>
+              {option.listLabel ?? option.label}
+            </li>
+          );
+        }}
         renderInput={(params) => (
           <TextField
             {...params}
