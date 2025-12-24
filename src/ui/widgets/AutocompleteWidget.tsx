@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useState, forwardRef, useRef } from "react";
 import type { OptionItem, WidgetComponent } from "../../types";
 import { compactFieldStyles } from "./styles";
+import { renderLabel } from "./utils";
 
 const StyledUl = styled("ul")(({ theme }) => ({
   padding: theme.spacing(0.5),
@@ -549,7 +550,7 @@ export const AutocompleteWidget: WidgetComponent = ({
             error={error}
             fullWidth
             helperText={helperText}
-            label={label}
+            label={renderLabel(label, restFieldProps?.required)}
             onBlur={() => {
               field.onBlur?.();
               form?.trigger(field.name);

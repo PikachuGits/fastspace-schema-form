@@ -1,27 +1,29 @@
-import type { ReactNode } from "react";
+import { Box } from "@mui/material";
+import { ReactNode } from "react";
 
-/**
- * 渲染带必填星号的 Label
- * 星号位于 Label 前面，放大并居中
- */
 export const renderLabel = (label: ReactNode, required?: boolean) => {
   if (!required) return label;
 
   return (
-    <span style={{ display: "flex", alignItems: "center" }}>
-      <span
-        style={{
-          color: "#d32f2f",
-          marginRight: "4px",
-          fontSize: "20px",
-          fontWeight: "bold",
-          lineHeight: "1",
-          paddingTop: "4px",
-        }}
-      >
-        *
-      </span>
+    <Box
+      component="span"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+
+        "&::before": {
+          content: '"✱"',
+          color: "error.main",
+          mr: "4px",
+          fontSize: "0.5em",
+          alignSelf: "center",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      }}
+    >
       {label}
-    </span>
+    </Box>
   );
 };

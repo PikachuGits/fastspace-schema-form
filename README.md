@@ -157,6 +157,7 @@ type OptionItem = {
       { label: 'User B', value: 'b' }
     ]
   },
+  // 使用 ui.props 或 fieldProps 都可以透传属性
   fieldProps: {
     // 这里的 onChange 会在表单值更新后触发
     onChange: (event, option) => {
@@ -169,6 +170,9 @@ type OptionItem = {
   }
 }
 ```
+
+> **注意**：在 v0.0.14 之前，`fieldProps` 需要写在 `ui.props` 中。从 v0.0.14 开始，支持直接在 Schema 顶层使用 `fieldProps`，这与 `ui.props` 是等效的。
+
 
 ### 日期时间组件
 
