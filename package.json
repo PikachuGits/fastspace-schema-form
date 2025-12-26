@@ -45,6 +45,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
+    "@tanstack/react-form": "^1.27.6",
+    "jsep": "^1.4.0",
     "valibot": "^1.0.0"
   },
   "devDependencies": {
