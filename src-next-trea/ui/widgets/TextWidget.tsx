@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useCallback } from "react";
 import { TextField, type TextFieldProps } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles } from "./styles";
@@ -57,6 +57,17 @@ export const TextWidgetRender = memo(function TextWidgetRender({
   slotProps,
 }: TextWidgetRenderProps) {
   if (!visible) return null;
+
+
+  // const handleBlur = useCallback(
+  //   (e) => {
+  //     const val = e.target.value;
+  //     onBlur?.(val);
+  //   },
+  //   [onBlur],
+  // );
+
+
 
   return (
     <TextField

@@ -66,3 +66,4 @@ examples/src/share/Schema/ui/widgets/TextareaWidget.tsx
 examples/src/share/Schema/ui/widgets/TextWidget.tsx
 examples/src/share/Schema/ui/widgets/TimeWidget.tsx
 examples/src/share/Schema/ui/widgets/utils.tsx
+.env

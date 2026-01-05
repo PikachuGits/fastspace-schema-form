@@ -61,12 +61,9 @@ function useFieldMeta(fieldName: string): FieldMeta | undefined {
     // 订阅函数
     const subscribe = useCallback(
         (callback: () => void) => {
-            // 简单实现：使用轮询检查
-            // 更好的实现需要在 EffectSystem 中增加事件发射
-            const interval = setInterval(callback, 100);
-            return () => clearInterval(interval);
+            return runtime.subscribe(fieldName, callback);
         },
-        []
+        [runtime, fieldName]
     );
 
     // 获取快照
@@ -100,12 +97,14 @@ export const FieldAdapter = memo(function FieldAdapter({
 
     // 从 Runtime 获取 Meta 状态
     const meta = useFieldMeta(name);
-
+   
     // 转换 validator
     const validators = React.useMemo(() => {
         if (!validate) return undefined;
+        const validatorFn = valibotValidator(validate);
         return {
-            onChange: valibotValidator(validate),
+            onChange: validatorFn,
+            onBlur: validatorFn,
         };
     }, [validate]);
 

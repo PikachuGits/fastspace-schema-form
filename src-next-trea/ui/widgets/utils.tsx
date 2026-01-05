@@ -15,7 +15,6 @@ export const renderLabel = (label: ReactNode, required?: boolean) => {
     <Box
       component="span"
       sx={{
-        display: "inline-flex",
         alignItems: "center",
         "&::before": {
           content: '"✱"',
@@ -26,6 +25,8 @@ export const renderLabel = (label: ReactNode, required?: boolean) => {
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
+          position: "relative",
+          top: "-2px",
         },
       }}
     >

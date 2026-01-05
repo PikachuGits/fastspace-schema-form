@@ -48,6 +48,13 @@ export class FormRuntime {
     }
 
     /**
+     * 获取 TanStack Form 实例 (仅用于调试或高级用法)
+     */
+    getForm(): AnyFormApi {
+        return this.form;
+    }
+
+    /**
      * 初始化运行时 (执行所有规则)
      */
     initialize(): void {
@@ -70,6 +77,13 @@ export class FormRuntime {
         for (const field of fields) {
             this.effectSystem.notifyFieldChange(field);
         }
+    }
+
+    /**
+     * 订阅字段 Meta 变更
+     */
+    subscribe(fieldName: string, listener: () => void): () => void {
+        return this.effectSystem.subscribe(fieldName, listener);
     }
 
     /**
@@ -135,5 +149,6 @@ export class FormRuntime {
         this.asyncScheduler.cancelAll();
         this.asyncScheduler.clearCache();
         this.effectSystem.clearTraces();
+        this.effectSystem.clearListeners();
     }
 }

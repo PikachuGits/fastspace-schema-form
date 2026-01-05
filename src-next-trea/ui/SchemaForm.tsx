@@ -1,10 +1,12 @@
 import React, {
   forwardRef,
+  use,
+  useEffect,
   useImperativeHandle,
   type FormHTMLAttributes,
   type ReactNode,
 } from "react";
-import { Box } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import "dayjs/locale/zh-cn";
@@ -16,6 +18,7 @@ import { SchemaFormProvider } from "../react/SchemaFormProvider";
 import { SchemaRenderer, type WidgetRegistry } from "./SchemaRenderer";
 import type { SchemaInput, CompiledSchema } from "../types";
 import type { FormRuntime } from "../core/runtime/Runtime";
+import { DevTools } from "./DevTools";
 
 // ============================================================================
 // Types
@@ -220,6 +223,8 @@ function SchemaFormInner<T extends Record<string, any> = Record<string, any>>(
           />
           {children}
         </Box>
+
+        {import.meta.env.DEV && <DevTools />}
       </SchemaFormProvider>
     </LocalizationProvider>
   );

@@ -32,10 +32,12 @@ const basicWidgetsSchema: SchemaInput = {
       component: "Text",
       defaultValue: "",
       colSpan: { xs: 12, md: 6 },
+      validate: v.pipe(v.string(), v.minLength(3, "至少3个字符")),
       ui: {
         label: "文本输入 (Text)",
         placeholder: "请输入文本",
         helperText: "基础文本输入框",
+        required: true
       },
     },
     {
@@ -1463,6 +1465,7 @@ const ExampleForm: React.FC<ExampleFormProps> = ({
   const formRef = useRef<SchemaFormInstance>(null);
   const cachedSchema = useMemo(() => schema, [schema]);
   const [submittedValues, setSubmittedValues] = useState<any>(null);
+
 
   const handleSubmit = (values: any) => {
     console.log(`[${title}] Submitted:`, values);

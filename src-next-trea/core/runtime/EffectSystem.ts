@@ -30,6 +30,7 @@ export type EffectTrace = {
   ruleId: string;
   target: string;
   type: SchemaRule["type"];
+  deps?: string[];
   duration: number;
   result: any;
   error?: Error;
@@ -87,6 +88,9 @@ export class EffectSystem {
   /** 字段 Meta 缓存 (避免频繁读取 Form State) */
   private metaCache: Map<string, FieldMeta> = new Map();
 
+  /** 字段订阅者 */
+  private listeners = new Map<string, Set<() => void>>();
+
   constructor(
     schema: CompiledSchema,
     form: AnyFormApi,
@@ -98,14 +102,39 @@ export class EffectSystem {
     this.scheduler = scheduler;
     this.config = {
       enableTracing:
-        config.enableTracing ?? process.env.NODE_ENV === "development",
+        config.enableTracing ??
+        // Support Vite
+        (typeof import.meta !== "undefined" && import.meta.env?.DEV) ??
+        // Support Node.js / Webpack
+        (typeof process !== "undefined" && process.env?.NODE_ENV === "development") ??
+        false,
       maxTraceCount: config.maxTraceCount ?? 1000,
-      onError: config.onError ?? (() => {}),
+      onError: config.onError ?? (() => { }),
       externalContext: config.externalContext ?? {},
     };
 
     // 初始化 Meta 缓存
     this.initializeMetaCache();
+  }
+
+  /**
+   * 订阅字段 Meta 变更
+   */
+  subscribe(fieldName: string, listener: () => void): () => void {
+    if (!this.listeners.has(fieldName)) {
+      this.listeners.set(fieldName, new Set());
+    }
+    this.listeners.get(fieldName)!.add(listener);
+
+    return () => {
+      const fieldListeners = this.listeners.get(fieldName);
+      if (fieldListeners) {
+        fieldListeners.delete(listener);
+        if (fieldListeners.size === 0) {
+          this.listeners.delete(fieldName);
+        }
+      }
+    };
   }
 
   /**
@@ -151,6 +180,13 @@ export class EffectSystem {
    */
   clearTraces(): void {
     this.traces = [];
+  }
+
+  /**
+   * 清除所有订阅者
+   */
+  clearListeners(): void {
+    this.listeners.clear();
   }
 
   /**
@@ -299,7 +335,7 @@ export class EffectSystem {
       if (rule.priority === prevPriority && this.config.enableTracing) {
         console.warn(
           `[EffectSystem] Rule conflict for "${rule.target}": ` +
-            `Multiple rules with same priority (${rule.priority}). Last one wins.`
+          `Multiple rules with same priority (${rule.priority}). Last one wins.`
         );
       }
       // 高优先级 (或同级后执行) 覆盖
@@ -376,6 +412,9 @@ export class EffectSystem {
           options,
         }));
 
+        // 通知订阅者
+        this.notifyListeners([rule.target]);
+
         this.logTrace(rule, startTime, options);
       })
       .catch((err) => {
@@ -431,6 +470,9 @@ export class EffectSystem {
       }
     }
 
+    // 收集发生变更的字段以便通知订阅者
+    const changedFields: string[] = [];
+
     // 应用 Meta 变更 (同时更新缓存和 Form)
     for (const [target, meta] of metaUpdates) {
       // 更新缓存
@@ -446,8 +488,34 @@ export class EffectSystem {
         });
       }
 
+      changedFields.push(target);
+
       // 更新 Form Meta
       this.form.setFieldMeta(target, (prev: any) => ({ ...prev, ...meta }));
+    }
+
+    // 通知订阅者
+    this.notifyListeners(changedFields);
+  }
+
+  /**
+   * 通知字段订阅者
+   */
+  private notifyListeners(changedFields: string[]): void {
+    for (const field of changedFields) {
+      const fieldListeners = this.listeners.get(field);
+      if (fieldListeners) {
+        fieldListeners.forEach((listener) => {
+          try {
+            listener();
+          } catch (error) {
+            console.error(
+              `[EffectSystem] Listener execution failed for field "${field}":`,
+              error
+            );
+          }
+        });
+      }
     }
   }
 
@@ -486,19 +554,36 @@ export class EffectSystem {
   }
 
   /**
-   * 简单的相等性比较
+   * 深度比较两个值是否相等
    */
   private isEqual(a: any, b: any): boolean {
     if (a === b) return true;
-    if (a === null || b === null) return a === b;
-    if (typeof a !== "object" || typeof b !== "object") return a === b;
 
-    // 简单的 JSON 比较 (适用于简单对象)
-    try {
-      return JSON.stringify(a) === JSON.stringify(b);
-    } catch {
-      return false;
+    if (a === null || b === null || typeof a !== "object" || typeof b !== "object") {
+      return a !== a && b !== b; // Handle NaN
     }
+
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!this.isEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+      if (!this.isEqual(a[key], b[key])) return false;
+    }
+
+    return true;
   }
 
   /**
@@ -516,6 +601,7 @@ export class EffectSystem {
       ruleId: "target" in rule ? `${rule.type}:${rule.target}` : `${rule.type}`,
       target: "target" in rule ? rule.target : "effect",
       type: rule.type,
+      deps: "deps" in rule ? rule.deps : undefined,
       duration: performance.now() - startTime,
       result,
       error,
