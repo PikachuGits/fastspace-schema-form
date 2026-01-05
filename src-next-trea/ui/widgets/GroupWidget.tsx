@@ -4,6 +4,7 @@ import type { WidgetProps } from "../FieldAdapter";
 import { useLayoutContext } from "../layout/LayoutContext";
 import { LayoutRenderer } from "../layout";
 import type { LayoutNode } from "../../types";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -44,6 +45,7 @@ export const GroupWidgetRender = memo(function GroupWidgetRender({
   layoutChildren,
   variant = "divider",
   spacing = 2,
+  required,
 }: GroupWidgetRenderProps) {
   if (!visible) return null;
 
@@ -65,7 +67,7 @@ export const GroupWidgetRender = memo(function GroupWidgetRender({
         <CardContent>
           {label && (
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              {label}
+              {renderLabel(label, required)}
             </Typography>
           )}
           {helperText && (
@@ -86,7 +88,7 @@ export const GroupWidgetRender = memo(function GroupWidgetRender({
           <>
             <Divider sx={{ mb: 2 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                {label}
+                {renderLabel(label, required)}
               </Typography>
             </Divider>
             {helperText && (
@@ -106,7 +108,7 @@ export const GroupWidgetRender = memo(function GroupWidgetRender({
     <Box sx={{ width: "100%" }}>
       {label && (
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          {label}
+          {renderLabel(label, required)}
         </Typography>
       )}
       {helperText && (

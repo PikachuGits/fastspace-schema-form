@@ -18,6 +18,22 @@ export {
   type TextWidgetRenderProps,
 } from "./TextWidget";
 
+// 密码输入
+export {
+  PasswordWidget,
+  PasswordWidgetRender,
+  type PasswordWidgetProps,
+  type PasswordWidgetRenderProps,
+} from "./PasswordWidget";
+
+// 多行文本
+export {
+  TextareaWidget,
+  TextareaWidgetRender,
+  type TextareaWidgetProps,
+  type TextareaWidgetRenderProps,
+} from "./TextareaWidget";
+
 // 数字输入
 export {
   NumberWidget,
@@ -147,6 +163,8 @@ export { renderLabel, parseColSpan } from "./utils";
 // ============================================================================
 
 import { TextWidgetRender } from "./TextWidget";
+import { PasswordWidgetRender } from "./PasswordWidget";
+import { TextareaWidgetRender } from "./TextareaWidget";
 import { NumberWidgetRender } from "./NumberWidget";
 import { SelectWidgetRender } from "./SelectWidget";
 import { CheckboxWidgetRender } from "./CheckboxWidget";
@@ -180,8 +198,8 @@ export type WidgetRenderFn = React.ComponentType<
 export const defaultWidgets: Record<string, WidgetRenderFn> = {
   // 文本类
   Text: TextWidgetRender,
-  Password: TextWidgetRender, // 使用 TextWidget + type="password"
-  Textarea: TextWidgetRender, // 使用 TextWidget + multiline
+  Password: PasswordWidgetRender,
+  Textarea: TextareaWidgetRender,
 
   // 数值类
   Number: NumberWidgetRender,

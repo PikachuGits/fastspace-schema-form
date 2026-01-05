@@ -18,6 +18,7 @@ import type { WidgetProps } from "../FieldAdapter";
 import { LayoutRenderer } from "../layout";
 import { useLayoutContext } from "../layout/LayoutContext";
 import type { LayoutNode } from "../../types";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -74,6 +75,7 @@ export const FormListWidgetRender = memo(function FormListWidgetRender({
   emptyText = "暂无数据",
   showIndex = false,
   itemDefaultValue = {},
+  required,
 }: FormListWidgetRenderProps) {
   if (!visible) return null;
 
@@ -137,7 +139,7 @@ export const FormListWidgetRender = memo(function FormListWidgetRender({
           }}
         >
           <Typography variant="subtitle1" fontWeight="bold">
-            {label}
+            {renderLabel(label, required)}
             {maxItems !== Infinity && (
               <Typography
                 component="span"

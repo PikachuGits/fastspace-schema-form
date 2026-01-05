@@ -1,45 +1,31 @@
-import React, { memo } from "react";
-import { TextField, type TextFieldProps } from "@mui/material";
+import React, { memo, useState } from "react";
+import { TextField, IconButton, InputAdornment } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles } from "./styles";
 import { renderLabel } from "./utils";
+
 // ============================================================================
 // Types
 // ============================================================================
 
-/**
- * 纯渲染组件 Props (用于 SchemaRenderer)
- */
-export type TextWidgetRenderProps = WidgetProps & {
+export type PasswordWidgetRenderProps = WidgetProps & {
   label?: string;
   placeholder?: string;
   helperText?: string;
-  multiline?: boolean;
-  rows?: number;
-  type?: "text" | "password" | "email" | "url" | "tel";
-  inputProps?: Record<string, any>;
-  slotProps?: TextFieldProps["slotProps"];
 };
 
-/**
- * 独立组件 Props (带 form/name)
- */
-export type TextWidgetProps = {
+export type PasswordWidgetProps = {
   form: any;
   name: string;
   validate?: any;
-} & Omit<TextWidgetRenderProps, keyof WidgetProps>;
+} & Omit<PasswordWidgetRenderProps, keyof WidgetProps>;
 
 // ============================================================================
-// 纯渲染组件 (用于 SchemaRenderer)
+// 纯渲染组件
 // ============================================================================
 
-/**
- * 文本输入渲染组件
- *
- * 接收 WidgetProps，不包含 FieldAdapter
- */
-export const TextWidgetRender = memo(function TextWidgetRender({
+export const PasswordWidgetRender = memo(function PasswordWidgetRender({
   value,
   onChange,
   onBlur,
@@ -50,13 +36,15 @@ export const TextWidgetRender = memo(function TextWidgetRender({
   label,
   placeholder,
   helperText,
-  multiline = false,
-  rows = 4,
-  type = "text",
-  inputProps,
-  slotProps,
-}: TextWidgetRenderProps) {
+}: PasswordWidgetRenderProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
   if (!visible) return null;
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   return (
     <TextField
@@ -70,33 +58,35 @@ export const TextWidgetRender = memo(function TextWidgetRender({
       required={required}
       error={!!error}
       helperText={error || helperText}
-      multiline={multiline}
-      rows={multiline ? rows : undefined}
-      type={type}
+      type={showPassword ? "text" : "password"}
+      size="small"
       sx={compactFieldStyles}
       slotProps={{
-        input: inputProps,
-        ...slotProps,
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle password visibility"
+                onClick={handleClickShowPassword}
+                onMouseDown={handleMouseDownPassword}
+                edge="end"
+                size="small"
+              >
+                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        },
       }}
     />
   );
 });
 
 // ============================================================================
-// 独立组件 (带 FieldAdapter)
+// 独立组件
 // ============================================================================
 
-/**
- * 文本输入组件 (MUI TextField)
- *
- * 包含 FieldAdapter，可独立使用
- *
- * @example
- * ```tsx
- * <TextWidget form={form} name="username" label="用户名" />
- * ```
- */
-export const TextWidget: React.FC<TextWidgetProps> = ({
+export const PasswordWidget: React.FC<PasswordWidgetProps> = ({
   form,
   name,
   validate,
@@ -108,11 +98,10 @@ export const TextWidget: React.FC<TextWidgetProps> = ({
       name={name}
       validate={validate}
       render={(props: WidgetProps) => (
-        <TextWidgetRender {...props} {...uiProps} />
+        <PasswordWidgetRender {...props} {...uiProps} />
       )}
     />
   );
 };
 
-// 默认导出渲染组件，用于 defaultWidgets 注册
-export default TextWidgetRender;
+export default PasswordWidgetRender;

@@ -1,6 +1,8 @@
 import React, { memo } from "react";
 import { TextField, Box } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { compactFieldStyles } from "./styles";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -11,8 +13,8 @@ export type CustomWidgetRenderProps = WidgetProps & {
   helperText?: string;
   /** 自定义渲染函数 */
   children?:
-    | React.ReactNode
-    | ((props: WidgetProps & Record<string, any>) => React.ReactNode);
+  | React.ReactNode
+  | ((props: WidgetProps & Record<string, any>) => React.ReactNode);
   /** 自定义组件 */
   component?: React.ComponentType<WidgetProps & Record<string, any>>;
   /** 传递给自定义组件的额外属性 */
@@ -105,11 +107,13 @@ export const CustomWidgetRender = memo(function CustomWidgetRender({
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
-      label={label}
+      label={renderLabel(label, required)}
       error={!!error}
       helperText={error || helperText}
       disabled={disabled}
       required={required}
+      size="small"
+      sx={compactFieldStyles}
       {...componentProps}
     />
   );

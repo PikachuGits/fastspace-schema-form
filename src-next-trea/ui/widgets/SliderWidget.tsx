@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -39,6 +40,7 @@ export const SliderWidgetRender = memo(function SliderWidgetRender({
   onChange,
   error,
   disabled,
+  required,
   visible = true,
   label,
   helperText,
@@ -62,7 +64,7 @@ export const SliderWidgetRender = memo(function SliderWidgetRender({
             mb: 1,
           }}
         >
-          <FormLabel>{label}</FormLabel>
+          <FormLabel>{renderLabel(label, required)}</FormLabel>
           {showValue && (
             <Typography variant="body2" color="text.secondary">
               {value ?? min}

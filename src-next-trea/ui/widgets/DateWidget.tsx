@@ -1,6 +1,12 @@
 import React, { memo } from "react";
-import { TextField } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/zh-cn";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { compactFieldStyles, DATE_FORMAT } from "./styles";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -9,10 +15,9 @@ import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 export type DateWidgetRenderProps = WidgetProps & {
   label?: string;
   helperText?: string;
-  type?: "date" | "time" | "datetime-local";
+  format?: string;
   min?: string;
   max?: string;
-  inputProps?: Record<string, any>;
 };
 
 export type DateWidgetProps = {
@@ -25,12 +30,6 @@ export type DateWidgetProps = {
 // 纯渲染组件
 // ============================================================================
 
-/**
- * 日期/时间输入渲染组件
- *
- * 使用原生 HTML5 日期输入 (性能最佳)
- * 如需更丰富的日期选择器，可自定义实现
- */
 export const DateWidgetRender = memo(function DateWidgetRender({
   value,
   onChange,
@@ -41,50 +40,39 @@ export const DateWidgetRender = memo(function DateWidgetRender({
   visible = true,
   label,
   helperText,
-  type = "date",
+  format = DATE_FORMAT,
   min,
   max,
-  inputProps,
 }: DateWidgetRenderProps) {
   if (!visible) return null;
 
-  // 格式化值用于显示
-  const formatValue = (val: any): string => {
-    if (!val) return "";
-    if (typeof val === "string") return val;
-    if (val instanceof Date) {
-      if (type === "date") {
-        return val.toISOString().split("T")[0];
-      }
-      if (type === "time") {
-        return val.toTimeString().slice(0, 5);
-      }
-      // datetime-local
-      return val.toISOString().slice(0, 16);
-    }
-    return String(val);
-  };
+  const dateValue: Dayjs | null = value ? dayjs(value) : null;
+  const minDate = min ? dayjs(min) : undefined;
+  const maxDate = max ? dayjs(max) : undefined;
 
   return (
-    <TextField
-      fullWidth
-      type={type}
-      label={label}
-      value={formatValue(value)}
-      onChange={(e) => onChange(e.target.value || null)}
-      onBlur={onBlur}
-      disabled={disabled}
-      required={required}
-      error={!!error}
-      helperText={error || helperText}
-      slotProps={{
-        input: {
-          inputProps: { min, max },
-          ...inputProps,
-        },
-        inputLabel: { shrink: true },
-      }}
-    />
+    <LocalizationProvider adapterLocale="zh-cn" dateAdapter={AdapterDayjs}>
+      <DatePicker
+        value={dateValue}
+        onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
+        format={format}
+        disabled={disabled}
+        minDate={minDate}
+        maxDate={maxDate}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            label: renderLabel(label, required),
+            error: !!error,
+            helperText: error || helperText,
+            required,
+            size: "small",
+            sx: compactFieldStyles,
+            onBlur,
+          },
+        }}
+      />
+    </LocalizationProvider>
   );
 });
 

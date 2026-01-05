@@ -1,6 +1,8 @@
 import React, { memo } from "react";
-import { DateTimePicker } from "@mui/x-date-pickers";
+import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/zh-cn";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles, DATETIME_FORMAT } from "./styles";
 import { renderLabel } from "./utils";
@@ -51,27 +53,29 @@ export const DateTimeWidgetRender = memo(function DateTimeWidgetRender({
   const maxValue = maxDateTime ? dayjs(maxDateTime) : undefined;
 
   return (
-    <DateTimePicker
-      value={dateTimeValue}
-      onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
-      format={format}
-      ampm={ampm}
-      disabled={disabled}
-      minDateTime={minValue}
-      maxDateTime={maxValue}
-      slotProps={{
-        textField: {
-          fullWidth: true,
-          label: renderLabel(label, required),
-          error: !!error,
-          helperText: error || helperText,
-          required,
-          size: "small",
-          sx: compactFieldStyles,
-          onBlur,
-        },
-      }}
-    />
+    <LocalizationProvider adapterLocale="zh-cn" dateAdapter={AdapterDayjs}>
+      <DateTimePicker
+        value={dateTimeValue}
+        onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
+        format={format}
+        ampm={ampm}
+        disabled={disabled}
+        minDateTime={minValue}
+        maxDateTime={maxValue}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            label: renderLabel(label, required),
+            error: !!error,
+            helperText: error || helperText,
+            required,
+            size: "small",
+            sx: compactFieldStyles,
+            onBlur,
+          },
+        }}
+      />
+    </LocalizationProvider>
   );
 });
 

@@ -7,7 +7,6 @@ import { safeParseAsync, safeParse } from 'valibot';
 export const valibotValidator = (schema: any) => {
     return ({ value }: { value: any }) => {
         if (!schema) return undefined;
-
         // 尝试解析
         // TanStack Form 期望返回错误消息字符串或 undefined
         // 使用同步解析以避免 Promise 被误认为是错误对象

@@ -8,6 +8,8 @@ import {
 } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 
+import { renderLabel } from "./utils";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -58,7 +60,7 @@ export const SwitchWidgetRender = memo(function SwitchWidgetRender({
             {...switchProps}
           />
         }
-        label={label || ""}
+        label={renderLabel(label, required)}
       />
       {(error || helperText) && (
         <FormHelperText>{error || helperText}</FormHelperText>

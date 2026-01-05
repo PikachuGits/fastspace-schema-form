@@ -1,6 +1,8 @@
 import React, { memo } from "react";
-import { TimePicker } from "@mui/x-date-pickers";
+import { TimePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/zh-cn";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles, TIME_FORMAT } from "./styles";
 import { renderLabel } from "./utils";
@@ -45,25 +47,27 @@ export const TimeWidgetRender = memo(function TimeWidgetRender({
   const timeValue: Dayjs | null = value ? dayjs(value, format) : null;
 
   return (
-    <TimePicker
-      value={timeValue}
-      onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
-      format={format}
-      ampm={ampm}
-      disabled={disabled}
-      slotProps={{
-        textField: {
-          fullWidth: true,
-          label: renderLabel(label, required),
-          error: !!error,
-          helperText: error || helperText,
-          required,
-          size: "small",
-          sx: compactFieldStyles,
-          onBlur,
-        },
-      }}
-    />
+    <LocalizationProvider adapterLocale="zh-cn" dateAdapter={AdapterDayjs}>
+      <TimePicker
+        value={timeValue}
+        onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
+        format={format}
+        ampm={ampm}
+        disabled={disabled}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            label: renderLabel(label, required),
+            error: !!error,
+            helperText: error || helperText,
+            required,
+            size: "small",
+            sx: compactFieldStyles,
+            onBlur,
+          },
+        }}
+      />
+    </LocalizationProvider>
   );
 });
 

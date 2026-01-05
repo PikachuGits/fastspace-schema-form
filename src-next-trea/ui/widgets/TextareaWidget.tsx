@@ -1,36 +1,32 @@
 import React, { memo } from "react";
-import {
-  FormControl,
-  FormControlLabel,
-  Checkbox,
-  FormHelperText,
-  type CheckboxProps,
-} from "@mui/material";
+import { TextField } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
-
+import { compactFieldStyles } from "./styles";
 import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type CheckboxWidgetRenderProps = WidgetProps & {
+export type TextareaWidgetRenderProps = WidgetProps & {
   label?: string;
+  placeholder?: string;
   helperText?: string;
-  checkboxProps?: Partial<CheckboxProps>;
+  rows?: number;
+  maxRows?: number;
 };
 
-export type CheckboxWidgetProps = {
+export type TextareaWidgetProps = {
   form: any;
   name: string;
   validate?: any;
-} & Omit<CheckboxWidgetRenderProps, keyof WidgetProps>;
+} & Omit<TextareaWidgetRenderProps, keyof WidgetProps>;
 
 // ============================================================================
 // 纯渲染组件
 // ============================================================================
 
-export const CheckboxWidgetRender = memo(function CheckboxWidgetRender({
+export const TextareaWidgetRender = memo(function TextareaWidgetRender({
   value,
   onChange,
   onBlur,
@@ -39,29 +35,31 @@ export const CheckboxWidgetRender = memo(function CheckboxWidgetRender({
   required,
   visible = true,
   label,
+  placeholder,
   helperText,
-  checkboxProps,
-}: CheckboxWidgetRenderProps) {
+  rows = 4,
+  maxRows,
+}: TextareaWidgetRenderProps) {
   if (!visible) return null;
 
   return (
-    <FormControl error={!!error} disabled={disabled} required={required}>
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={!!value}
-            onChange={(e) => onChange(e.target.checked)}
-            onBlur={onBlur}
-            disabled={disabled}
-            {...checkboxProps}
-          />
-        }
-        label={renderLabel(label, required)}
-      />
-      {(error || helperText) && (
-        <FormHelperText>{error || helperText}</FormHelperText>
-      )}
-    </FormControl>
+    <TextField
+      fullWidth
+      label={renderLabel(label, required)}
+      placeholder={placeholder}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      disabled={disabled}
+      required={required}
+      error={!!error}
+      helperText={error || helperText}
+      multiline
+      rows={rows}
+      maxRows={maxRows}
+      size="small"
+      sx={compactFieldStyles}
+    />
   );
 });
 
@@ -69,7 +67,7 @@ export const CheckboxWidgetRender = memo(function CheckboxWidgetRender({
 // 独立组件
 // ============================================================================
 
-export const CheckboxWidget: React.FC<CheckboxWidgetProps> = ({
+export const TextareaWidget: React.FC<TextareaWidgetProps> = ({
   form,
   name,
   validate,
@@ -81,10 +79,10 @@ export const CheckboxWidget: React.FC<CheckboxWidgetProps> = ({
       name={name}
       validate={validate}
       render={(props: WidgetProps) => (
-        <CheckboxWidgetRender {...props} {...uiProps} />
+        <TextareaWidgetRender {...props} {...uiProps} />
       )}
     />
   );
 };
 
-export default CheckboxWidgetRender;
+export default TextareaWidgetRender;

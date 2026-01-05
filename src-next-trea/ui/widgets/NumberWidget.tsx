@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { TextField, type TextFieldProps } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -49,10 +50,11 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     if (rawValue === "") {
-      onChange(undefined);
+      // 使用 null 而不是 undefined，避免 React Hook Form 回退到 defaultValue
+      onChange(null);
     } else {
       const num = parseFloat(rawValue);
-      onChange(isNaN(num) ? undefined : num);
+      onChange(isNaN(num) ? null : num);
     }
   };
 
@@ -60,7 +62,7 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
     <TextField
       fullWidth
       type="number"
-      label={label}
+      label={renderLabel(label, required)}
       placeholder={placeholder}
       value={value ?? ""}
       onChange={handleChange}

@@ -12,6 +12,8 @@ import {
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import type { OptionItem } from "./SelectWidget";
 
+import { renderLabel } from "./utils";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -62,15 +64,20 @@ export const RadioWidgetRender = memo(function RadioWidgetRender({
 
   const radioGroupContent = (
     <RadioGroup
-      row={row}
+      row={row || inline} // inline 模式强制 row
       value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+          // 尝试保持原始值的类型
+          const strValue = e.target.value;
+          const originalOption = normalizedOptions.find(o => String(o.value) === strValue);
+          onChange(originalOption ? originalOption.value : strValue);
+      }}
       onBlur={onBlur}
     >
       {normalizedOptions.map((opt) => (
         <FormControlLabel
           key={opt.key ?? String(opt.value)}
-          value={opt.value}
+          value={String(opt.value)} // 转为 string
           control={<Radio disabled={opt.disabled} {...radioProps} />}
           label={opt.listLabel ?? opt.label}
           disabled={opt.disabled || disabled}
@@ -89,8 +96,8 @@ export const RadioWidgetRender = memo(function RadioWidgetRender({
         required={required}
       >
         <Stack direction="row" alignItems="center" spacing={2}>
-          <FormLabel component="legend" sx={{ mb: 0 }}>
-            {label}
+          <FormLabel component="legend" sx={{ mb: 0, flexShrink: 0 }}>
+            {renderLabel(label, required)}
           </FormLabel>
           {radioGroupContent}
         </Stack>
@@ -108,7 +115,7 @@ export const RadioWidgetRender = memo(function RadioWidgetRender({
       disabled={disabled}
       required={required}
     >
-      {label && <FormLabel component="legend">{label}</FormLabel>}
+      {label && <FormLabel component="legend">{renderLabel(label, required)}</FormLabel>}
       {radioGroupContent}
       {(error || helperText) && (
         <FormHelperText>{error || helperText}</FormHelperText>

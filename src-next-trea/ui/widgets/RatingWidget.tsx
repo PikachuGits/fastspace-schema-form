@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { FormControl, FormLabel, FormHelperText, Rating, Box } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
@@ -30,6 +31,7 @@ export const RatingWidgetRender = memo(function RatingWidgetRender({
   onChange,
   error,
   disabled,
+  required,
   visible = true,
   label,
   helperText,
@@ -42,7 +44,9 @@ export const RatingWidgetRender = memo(function RatingWidgetRender({
 
   return (
     <FormControl error={!!error} disabled={disabled}>
-      {label && <FormLabel sx={{ mb: 0.5 }}>{label}</FormLabel>}
+      {label && (
+        <FormLabel sx={{ mb: 0.5 }}>{renderLabel(label, required)}</FormLabel>
+      )}
       <Box>
         <Rating
           value={value ?? 0}

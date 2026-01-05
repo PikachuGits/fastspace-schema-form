@@ -184,23 +184,23 @@ const InfiniteAutocompleteListbox = forwardRef<HTMLUListElement, InfiniteListbox
 // ============================================================================
 
 export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
-    value,
-    onChange,
-    onBlur,
-    options = [],
-    disabled,
-    visible = true,
-    required,
-    error,
-    label,
-    placeholder,
-    helperText,
-    multiple = false,
+  value,
+  onChange,
+  onBlur,
+  options = [],
+  disabled,
+  visible = true,
+  required,
+  error,
+  label,
+  placeholder,
+  helperText,
+  multiple = false,
   freeSolo = false,
   loading: userLoading = false,
   remoteConfig,
 }: AutocompleteWidgetRenderProps) {
-    if (!visible) return null;
+  if (!visible) return null;
 
   // 远程配置 ref
   const remoteConfigRef = useRef(remoteConfig);
@@ -217,6 +217,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
 
   // 记录选中的选项
   const selectedOptionsRef = useRef<OptionItem[]>([]);
+  // 标记本次打开是否已选择新值
+  const hasSelectedRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 当前使用的选项
@@ -227,6 +229,28 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   const normalizedOptions = currentOptions.map((opt) =>
     typeof opt === "object" ? opt : { label: String(opt), value: opt }
   );
+
+  // 更新 selectedOptionsRef：确保选中项不会因搜索而丢失
+  useEffect(() => {
+    if (!remoteConfig) return;
+    const values = Array.isArray(value) ? value : value ? [value] : [];
+    if (values.length === 0) return;
+
+    const currentSelected = localOptions.filter((o) => values.includes(o.value));
+    const newSelected = [...selectedOptionsRef.current];
+    let changed = false;
+
+    currentSelected.forEach((item) => {
+      if (!newSelected.some((s) => s.value === item.value)) {
+        newSelected.push(item);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      selectedOptionsRef.current = newSelected;
+    }
+  }, [value, localOptions, remoteConfig]);
 
   // 远程加载函数
   const fetchOptions = useCallback(
@@ -331,6 +355,7 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
 
   // 打开时加载
   const handleOpen = () => {
+    hasSelectedRef.current = false;
     setOpen(true);
     setInputValue("");
     if (remoteConfig) {
@@ -340,6 +365,21 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
 
   const handleClose = () => {
     setOpen(false);
+
+    // 如果没有选择新值，回填原来的 inputValue
+    if (!hasSelectedRef.current && !multiple && remoteConfig) {
+      const currentValue = value;
+      if (currentValue !== null && currentValue !== undefined) {
+        // 尝试从 localOptions 或 selectedOptionsRef 中找到对应的 label
+        const selectedOption =
+          localOptions.find((o) => o.value === currentValue) ||
+          selectedOptionsRef.current.find((o) => o.value === currentValue);
+
+        if (selectedOption) {
+          setInputValue(selectedOption.label);
+        }
+      }
+    }
   };
 
   // 输入变化
@@ -389,48 +429,53 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   }, []);
 
   // 获取选中值
-    const getValue = () => {
-        if (multiple) {
-            if (!Array.isArray(value)) return [];
+  const getValue = () => {
+    if (multiple) {
+      if (!Array.isArray(value)) return [];
       return value
         .map((v) => normalizedOptions.find((o) => o.value === v) || { label: String(v), value: v })
         .filter(Boolean);
-        }
+    }
     return normalizedOptions.find((o) => o.value === value) || (value ? { label: String(value), value } : null);
-    };
+  };
 
-    return (
-        <Autocomplete
-            multiple={multiple}
+  return (
+    <Autocomplete
+      multiple={multiple}
       freeSolo={freeSolo}
       disableCloseOnSelect={multiple}
       open={open}
       onOpen={handleOpen}
       onClose={handleClose}
-            options={normalizedOptions}
+      options={normalizedOptions}
       loading={loading || userLoading}
       filterOptions={remoteConfig ? (x) => x : undefined}
       inputValue={remoteConfig ? inputValue : undefined}
       onInputChange={remoteConfig ? handleInputChange : undefined}
       getOptionLabel={(option) => (option as OptionItem)?.label || String((option as OptionItem)?.value) || ""}
       isOptionEqualToValue={(option, val) => (option as OptionItem).value === (val as OptionItem).value}
-            value={getValue()}
-            onChange={(_, newValue) => {
-                if (multiple) {
+      value={getValue()}
+      onChange={(_, newValue) => {
+        // 标记已选择
+        hasSelectedRef.current = true;
+
+        if (multiple) {
           const values = (newValue as OptionItem[]).map((v) => v.value);
           onChange(values);
           // 保存选中项
           selectedOptionsRef.current = newValue as OptionItem[];
-                } else {
+        } else {
           const val = (newValue as OptionItem)?.value ?? null;
           onChange(val);
           if (newValue) {
             selectedOptionsRef.current = [newValue as OptionItem];
+            // 单选时，选中后更新 inputValue 为选中项的 label
+            setInputValue((newValue as OptionItem).label);
           }
-                }
-            }}
-            onBlur={onBlur}
-            disabled={disabled}
+        }
+      }}
+      onBlur={onBlur}
+      disabled={disabled}
       slots={{
         listbox: remoteConfig ? InfiniteAutocompleteListbox : undefined,
       }}
@@ -440,12 +485,12 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
           style: { maxHeight: 260 },
           ...(remoteConfig
             ? {
-                fetchingMore,
-                hasMore,
-                showNoMore: localOptions.length > 0,
-                empty: localOptions.length === 0 && !loading && !fetchingMore,
-                error: false,
-              }
+              fetchingMore,
+              hasMore,
+              showNoMore: localOptions.length > 0,
+              empty: localOptions.length === 0 && !loading && !fetchingMore,
+              error: false,
+            }
             : {}),
         } as any,
         chip: {
@@ -457,17 +502,17 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
         <li {...props} key={(option as OptionItem).key ?? String((option as OptionItem).value)}>
           {(option as OptionItem).listLabel ?? (option as OptionItem).label}
         </li>
-            )}
-            renderTags={(tagValue, getTagProps) =>
-                tagValue.map((option, index) => (
-                    <Chip
+      )}
+      renderTags={(tagValue, getTagProps) =>
+        tagValue.map((option, index) => (
+          <Chip
             label={(option as OptionItem).label}
-                        {...getTagProps({ index })}
+            {...getTagProps({ index })}
             key={(option as OptionItem).key ?? String((option as OptionItem).value)}
-                        size="small"
-                    />
-                ))
-            }
+            size="small"
+          />
+        ))
+      }
       renderInput={(params) => (
         <TextField
           {...params}
@@ -511,8 +556,8 @@ export const AutocompleteWidget: React.FC<AutocompleteWidgetProps> = ({
       name={name}
       validate={validate}
       render={(props: WidgetProps) => <AutocompleteWidgetRender {...props} {...uiProps} />}
-        />
-    );
+    />
+  );
 };
 
 export default AutocompleteWidgetRender;
