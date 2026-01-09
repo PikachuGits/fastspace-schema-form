@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { TextField, type TextFieldProps } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { compactFieldStyles } from "./styles";
 import { renderLabel } from "./utils";
 
 // ============================================================================
@@ -62,6 +63,7 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
     <TextField
       fullWidth
       type="number"
+      size="small"
       label={renderLabel(label, required)}
       placeholder={placeholder}
       value={value ?? ""}
@@ -71,6 +73,7 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
       required={required}
       error={!!error}
       helperText={error || helperText}
+      sx={compactFieldStyles}
       slotProps={{
         input: {
           inputProps: { min, max, step },

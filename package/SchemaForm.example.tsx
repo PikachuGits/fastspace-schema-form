@@ -37,7 +37,7 @@ const basicWidgetsSchema: SchemaInput = {
         label: "文本输入 (Text)",
         placeholder: "请输入文本",
         helperText: "基础文本输入框",
-        required: true
+        required: true,
       },
     },
     {
@@ -55,11 +55,17 @@ const basicWidgetsSchema: SchemaInput = {
       name: "email",
       component: "Text",
       colSpan: { xs: 12, md: 6 },
-      validate: v.pipe(v.string(), v.check(
-        (val) =>
-          val === undefined || val === null || val === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val)),
-        `email必须是有效的邮箱`,
-      )),
+      validate: v.pipe(
+        v.string(),
+        v.check(
+          (val) =>
+            val === undefined ||
+            val === null ||
+            val === "" ||
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val)),
+          `email必须是有效的邮箱`
+        )
+      ),
       ui: {
         label: "邮箱 (Email)",
         placeholder: "example@domain.com",
@@ -95,8 +101,9 @@ const basicWidgetsSchema: SchemaInput = {
       name: "number",
       component: "Number",
       defaultValue: 0,
-      colSpan: { xs: 12, md: 4 },
+      colSpan: { xs: 12, md: 2 },
       validate: v.pipe(v.number("请输入数字"), v.minValue(0), v.maxValue(100)),
+      independent: true,
       ui: {
         label: "数字输入 (Number)",
         min: 0,
@@ -108,14 +115,16 @@ const basicWidgetsSchema: SchemaInput = {
       name: "slider",
       component: "Slider",
       defaultValue: 50,
-      colSpan: { xs: 12, md: 4 },
+      colSpan: { xs: 12, md: 6 },
+      // independent: true,
       ui: {
         label: "滑块 (Slider)",
         min: 0,
         max: 100,
-        step: 5,
+        step: 2,
         marks: true,
         helperText: "拖动调整数值",
+        inline: true,
       },
     },
     {
@@ -128,6 +137,7 @@ const basicWidgetsSchema: SchemaInput = {
         max: 5,
         precision: 0.5,
         helperText: "支持半星",
+        inline: true,
       },
     },
 
@@ -153,15 +163,17 @@ const basicWidgetsSchema: SchemaInput = {
       name: "radio",
       component: "Radio",
       defaultValue: "A",
-      colSpan: { xs: 12, md: 6 },
+      independent: true,
+      colSpan: { xs: 12, md: 12 },
       options: [
-        { label: "选项 A", value: "A" },
+        { label: "选项 A选项 A选项 A选项 A选项 A", value: "A" },
         { label: "选项 B", value: "B" },
         { label: "选项 C", value: "C" },
       ],
       ui: {
         label: "单选按钮组 (Radio)",
         row: true,
+        inline: true,
         helperText: "横向排列",
       },
     },
@@ -731,7 +743,10 @@ const validationSchema: SchemaInput = {
       name: "requiredField",
       component: "Text",
       colSpan: { xs: 12, md: 6 },
-      validate: v.pipe(v.string("此字段为必填项"), v.nonEmpty("此字段为必填项")),
+      validate: v.pipe(
+        v.string("此字段为必填项"),
+        v.nonEmpty("此字段为必填项")
+      ),
       ui: {
         label: "必填字段",
         placeholder: "必须填写",
@@ -742,7 +757,10 @@ const validationSchema: SchemaInput = {
       name: "minLengthField",
       component: "Text",
       colSpan: { xs: 12, md: 6 },
-      validate: v.pipe(v.string("请输入内容"), v.minLength(5, "至少需要5个字符")),
+      validate: v.pipe(
+        v.string("请输入内容"),
+        v.minLength(5, "至少需要5个字符")
+      ),
       ui: {
         label: "最小长度验证",
         placeholder: "至少5个字符",
@@ -951,23 +969,29 @@ const asyncOptionsSchema: SchemaInput = {
         remoteConfig: {
           pageSize: 10,
           debounceTimeout: 300,
-          fetchOptions: async (keyword: string, page: number, pageSize: number) => {
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
             // 模拟 API 请求
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             const allUsers = Array.from({ length: 100 }, (_, i) => ({
-              label: `用户${i + 1} (${["张", "李", "王", "赵", "刘"][i % 5]}${["明", "华", "强", "伟", "芳"][i % 5]
-                })`,
+              label: `用户${i + 1} (${["张", "李", "王", "赵", "刘"][i % 5]}${
+                ["明", "华", "强", "伟", "芳"][i % 5]
+              })`,
               value: `user-${i + 1}`,
-              listLabel: `用户${i + 1} - ${["开发", "设计", "产品", "运营", "测试"][i % 5]
-                }`,
+              listLabel: `用户${i + 1} - ${
+                ["开发", "设计", "产品", "运营", "测试"][i % 5]
+              }`,
             }));
 
             // 过滤
             const filtered = keyword
               ? allUsers.filter((u) =>
-                u.label.toLowerCase().includes(keyword.toLowerCase())
-              )
+                  u.label.toLowerCase().includes(keyword.toLowerCase())
+                )
               : allUsers;
 
             // 分页
@@ -1466,7 +1490,6 @@ const ExampleForm: React.FC<ExampleFormProps> = ({
   const cachedSchema = useMemo(() => schema, [schema]);
   const [submittedValues, setSubmittedValues] = useState<any>(null);
 
-
   const handleSubmit = (values: any) => {
     console.log(`[${title}] Submitted:`, values);
     setSubmittedValues(values);
@@ -1487,36 +1510,34 @@ const ExampleForm: React.FC<ExampleFormProps> = ({
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
         spacing={2}
-      >
-        <Divider sx={{ my: 3 }} />
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-          <Button type="submit" variant="contained" color="primary">
-            提交
-          </Button>
-          <Button
-            type="button"
-            variant="outlined"
-            onClick={() => {
-              formRef.current?.reset();
-              setSubmittedValues(null);
-            }}
-          >
-            重置
-          </Button>
-          <Button
-            type="button"
-            variant="text"
-            onClick={() => {
-              const values = formRef.current?.getValues();
-              console.log(`[${title}] Current values:`, values);
-              alert(JSON.stringify(values, null, 2));
-            }}
-          >
-            获取值
-          </Button>
-        </Stack>
-      </SchemaForm>
-
+      ></SchemaForm>
+      <Divider sx={{ my: 3 }} />
+      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        <Button type="submit" variant="contained" color="primary">
+          提交
+        </Button>
+        <Button
+          type="button"
+          variant="outlined"
+          onClick={() => {
+            formRef.current?.reset();
+            setSubmittedValues(null);
+          }}
+        >
+          重置
+        </Button>
+        <Button
+          type="button"
+          variant="text"
+          onClick={() => {
+            const values = formRef.current?.getValues();
+            console.log(`[${title}] Current values:`, values);
+            alert(JSON.stringify(values, null, 2));
+          }}
+        >
+          获取值
+        </Button>
+      </Stack>
       {submittedValues && (
         <Alert severity="success" sx={{ mt: 2 }}>
           <Typography variant="subtitle2" gutterBottom>

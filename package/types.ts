@@ -128,8 +128,8 @@ export type SchemaField = {
     children?: SchemaField[];
     /** 栅格布局配置 (MUI Grid size) */
     colSpan?: number | Record<string, number>; // { xs: 12, md: 6 }
-    /** 强制换行 */
-    newLine?: boolean;
+    /** 独占一行（组件占满整行，内部宽度由 colSpan 控制） */
+    independent?: boolean;
     // 其他 UI 属性
     ui?: Record<string, any>;
 };

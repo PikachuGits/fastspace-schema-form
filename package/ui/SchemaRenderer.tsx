@@ -78,6 +78,43 @@ const FieldRenderer = memo(function FieldRenderer({
   // 提取 UI 属性
   const uiProps = field.props || {};
 
+  // 是否独占一行
+  const independent = uiProps.independent === true;
+
+  // independent 模式：组件独占一行，但宽度仍由 colSpan 控制
+  if (independent) {
+    return (
+      <Grid size={12}>
+        <Grid container>
+          <Grid size={colSpan}>
+            <FieldAdapter
+              form={form}
+              name={field.name}
+              validate={field.validate}
+              fieldProps={{
+                disabled: disabled || uiProps.disabled,
+                readOnly: readOnly || uiProps.readOnly,
+                layoutChildren,
+              }}
+              render={(props: WidgetProps) => (
+                <Widget
+                  {...props}
+                  {...uiProps}
+                  label={uiProps.label}
+                  placeholder={uiProps.placeholder}
+                  helperText={uiProps.helperText}
+                  options={
+                    props.options?.length ? props.options : uiProps.options
+                  }
+                />
+              )}
+            />
+          </Grid>
+        </Grid>
+      </Grid>
+    );
+  }
+
   return (
     <Grid size={colSpan}>
       <FieldAdapter

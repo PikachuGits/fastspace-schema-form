@@ -70,8 +70,8 @@ export default function Demo() {
 
 关键点：
 
-- `SchemaForm` 内部使用 `react-hook-form` 管理状态，并通过 `ref.submit()` 触发提交（见 `src/ui/SchemaForm.tsx:454`）。
-- `rules` 写在 schema 上，由动态 resolver 生成校验逻辑（见 `src/core/validation/valibotAdapter.ts:354`）。
+- `SchemaForm` 内部使用 TanStack Form 管理状态，并通过 `ref.submit()` 触发提交（见 `package/ui/SchemaForm.tsx`）。
+- `rules` 写在 schema 上，由动态 resolver 生成校验逻辑（见 `package/core/validation/valibotAdapter.ts`）。
 
 ## 4. 本仓库开发命令
 

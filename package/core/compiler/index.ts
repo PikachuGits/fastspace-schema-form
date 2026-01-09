@@ -275,9 +275,11 @@ export class SchemaCompiler {
           defaultValue: field.defaultValue,
           props: {
             ...field.ui,
-            // 合并布局属性
-            colSpan: field.colSpan ?? field.ui?.colSpan,
-            newLine: field.newLine ?? field.ui?.newLine,
+            // 布局属性（仅在字段根级别配置）
+            colSpan: field.colSpan,
+            independent: field.independent,
+            // 静态 options 直接放入 props (作为 fallback，Runtime 设置的 meta.options 优先)
+            ...(Array.isArray(field.options) ? { options: field.options } : {}),
           },
           validate: field.validate,
         };

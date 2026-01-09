@@ -46,7 +46,10 @@ export {
   SelectWidget,
   SelectWidgetRender,
   type SelectWidgetProps,
+  type SelectWidgetRenderProps,
   type OptionItem,
+  type ButtonConfig as SelectButtonConfig,
+  type SuffixButtonRender as SelectSuffixButtonRender,
 } from "./SelectWidget";
 
 // 复选框
@@ -149,13 +152,37 @@ export {
   type AutocompleteWidgetRenderProps,
   type OptionItem as AutocompleteOptionItem,
   type RemoteConfig,
+  type ButtonConfig as AutocompleteButtonConfig,
+  type SuffixButtonRender as AutocompleteSuffixButtonRender,
+  type SearchClearConfig,
+  type OnAddOptionSuccess,
 } from "./AutocompleteWidget";
 
 // ============================================================================
 // 公共模块
 // ============================================================================
 
-export { compactFieldStyles, DATE_FORMAT, TIME_FORMAT, DATETIME_FORMAT } from "./styles";
+// 样式系统
+export {
+  // 样式常量
+  FIELD_HEIGHT,
+  FONT_SIZE,
+  SPACING,
+  // 预定义样式
+  compactFieldStyles,
+  formControlStyles,
+  inlineLayoutStyles,
+  labeledControlStyles,
+  // 日期格式
+  DATE_FORMAT,
+  TIME_FORMAT,
+  DATETIME_FORMAT,
+  // 主题配置
+  defaultWidgetTheme,
+  createWidgetStyles,
+  type WidgetThemeConfig,
+} from "./styles";
+
 export { renderLabel, parseColSpan } from "./utils";
 
 // ============================================================================

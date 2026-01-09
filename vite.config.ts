@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      include: ['src'],
+      include: ['package'],
       rollupTypes: true,
       tsconfigPath: './tsconfig.json'
     })
@@ -17,7 +17,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: resolve('src/index.tsx'),
+      entry: resolve('package/index.ts'),
       name: 'SchemaFormLib',
       fileName: 'schema-form-lib',
     },

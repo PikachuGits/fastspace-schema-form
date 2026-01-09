@@ -11,7 +11,7 @@ import {
   parse,
   safeParse,
 } from "valibot";
-import { SchemaFormExample } from "../../../src-next-trea/SchemaForm.example";
+import { SchemaFormExample } from "../../../package/SchemaForm.example";
 import * as v from "valibot";
 
 /**

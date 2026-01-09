@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
+import { labeledControlStyles, FIELD_HEIGHT, FONT_SIZE } from "./styles";
 import { renderLabel } from "./utils";
 
 // ============================================================================
@@ -23,6 +24,8 @@ export type SliderWidgetRenderProps = WidgetProps & {
   marks?: boolean | { value: number; label?: string }[];
   valueLabelDisplay?: "on" | "auto" | "off";
   showValue?: boolean;
+  /** 内联模式：label 和 slider 在同一行 */
+  inline?: boolean;
 };
 
 export type SliderWidgetProps = {
@@ -50,38 +53,104 @@ export const SliderWidgetRender = memo(function SliderWidgetRender({
   marks,
   valueLabelDisplay = "auto",
   showValue = true,
+  inline = false,
 }: SliderWidgetRenderProps) {
   if (!visible) return null;
 
+  const sliderElement = (
+    <Slider
+      size="small"
+      sx={{ py: 0.3 }}
+      value={value ?? min}
+      onChange={(_, v) => onChange(v)}
+      disabled={disabled}
+      min={min}
+      max={max}
+      step={step}
+      marks={marks}
+      valueLabelDisplay={valueLabelDisplay}
+    />
+  );
+
+  // 内联模式
+  if (inline) {
+    return (
+      <FormControl
+        fullWidth
+        error={!!error}
+        disabled={disabled}
+        sx={{
+          ...labeledControlStyles,
+          minHeight: `${FIELD_HEIGHT.compact}px`,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            minHeight: `${FIELD_HEIGHT.compact}px`,
+            gap: 2,
+          }}
+        >
+          {label && (
+            <FormLabel sx={{ mb: 0, flexShrink: 0 }}>
+              {renderLabel(label, required)}
+            </FormLabel>
+          )}
+          <Box sx={{ flex: 1, px: 1 }}>{sliderElement}</Box>
+          {showValue && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                fontSize: FONT_SIZE.input,
+                minWidth: 32,
+                textAlign: "right",
+              }}
+            >
+              {value ?? min}
+            </Typography>
+          )}
+        </Box>
+        {(error || helperText) && (
+          <FormHelperText>{error || helperText}</FormHelperText>
+        )}
+      </FormControl>
+    );
+  }
+
+  // 默认模式
   return (
-    <FormControl fullWidth error={!!error} disabled={disabled}>
+    <FormControl
+      fullWidth
+      error={!!error}
+      disabled={disabled}
+      sx={{
+        ...labeledControlStyles,
+      }}
+    >
       {label && (
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 1,
+            mb: 0.5,
           }}
         >
           <FormLabel>{renderLabel(label, required)}</FormLabel>
           {showValue && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ fontSize: FONT_SIZE.input }}
+            >
               {value ?? min}
             </Typography>
           )}
         </Box>
       )}
-      <Slider
-        value={value ?? min}
-        onChange={(_, v) => onChange(v)}
-        disabled={disabled}
-        min={min}
-        max={max}
-        step={step}
-        marks={marks}
-        valueLabelDisplay={valueLabelDisplay}
-      />
+      {sliderElement}
       {(error || helperText) && (
         <FormHelperText>{error || helperText}</FormHelperText>
       )}
@@ -112,4 +181,3 @@ export const SliderWidget: React.FC<SliderWidgetProps> = ({
 };
 
 export default SliderWidgetRender;
-

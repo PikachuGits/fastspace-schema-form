@@ -17,6 +17,7 @@ import {
   Button,
   Stack,
   Collapse,
+  Grid,
 } from "@mui/material";
 import {
   BugReport as BugIcon,
@@ -53,7 +54,7 @@ function TabPanel(props: TabPanelProps) {
       id={`devtools-tabpanel-${index}`}
       aria-labelledby={`devtools-tab-${index}`}
       {...other}
-      style={{ height: "100%", overflow: "auto" }}
+      style={{ height: "100%", overflow: "auto", position: 'relative' }}
     >
       {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
     </div>
@@ -65,6 +66,7 @@ function TabPanel(props: TabPanelProps) {
 // ============================================================================
 
 const TraceItem = ({ trace }: { trace: any }) => {
+  if (!trace) return null;
   const [expanded, setExpanded] = useState(false);
 
   // Format duration color
@@ -76,27 +78,38 @@ const TraceItem = ({ trace }: { trace: any }) => {
 
   return (
     <Paper sx={{ mb: 1, p: 1, bgcolor: "background.default" }} variant="outlined">
-      <Box
-        sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+      <Grid
+        container
+        alignItems="center"
+        spacing={1}
         onClick={() => setExpanded(!expanded)}
+        sx={{ cursor: "pointer" }}
       >
-        <Chip
-          label={new Date(trace.timestamp).toLocaleTimeString()}
-          size="small"
-          variant="outlined"
-          sx={{ mr: 1, fontSize: "0.7rem" }}
-        />
-        <Typography variant="body2" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-          {trace.type.toUpperCase()}
-        </Typography>
-        <Chip
-          label={`${trace.duration.toFixed(1)}ms`}
-          size="small"
-          color={getDurationColor(trace.duration)}
-          sx={{ mr: 1, height: 20 }}
-        />
-        {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-      </Box>
+        <Grid>
+          <Chip
+            label={new Date(trace.timestamp).toLocaleTimeString()}
+            size="small"
+            variant="outlined"
+            sx={{ fontSize: "0.7rem" }}
+          />
+        </Grid>
+        <Grid size="grow" sx={{ minWidth: 0 }}>
+          <Typography variant="body2" noWrap sx={{ fontWeight: "bold" }}>
+            {trace.type.toUpperCase()}
+          </Typography>
+        </Grid>
+        <Grid>
+          <Chip
+            label={`${trace.duration.toFixed(1)}ms`}
+            size="small"
+            color={getDurationColor(trace.duration)}
+            sx={{ height: 20 }}
+          />
+        </Grid>
+        <Grid>
+          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </Grid>
+      </Grid>
       <Box sx={{ mt: 0.5 }}>
         <Typography variant="caption" color="text.secondary" display="block">
           Target: {trace.target}
@@ -151,49 +164,55 @@ const FieldsView = () => {
   }, [runtime]);
 
   return (
-    <List dense>
-      {Object.entries(fields).map(([fieldName, { runtimeMeta, formMeta, value }]) => (
-        <ListItem key={fieldName} disablePadding sx={{ display: 'block', mb: 2 }}>
-          <Paper variant="outlined" sx={{ p: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2" color="primary">{fieldName}</Typography>
-              <Chip
-                label={runtimeMeta?.isVisible !== false ? "Visible" : "Hidden"}
-                size="small"
-                color={runtimeMeta?.isVisible !== false ? "success" : "default"}
-                variant="outlined"
-              />
-            </Box>
-            {runtimeMeta?.isRequired && (
-              <Chip label="Required" size="small" color="warning" sx={{ mr: 0.5, mb: 0.5 }} />
-            )}
-            {runtimeMeta?.isDisabled && (
-              <Chip label="Disabled" size="small" color="default" sx={{ mr: 0.5, mb: 0.5 }} />
-            )}
+    <Box>
+      <List dense>
+        {Object.entries(fields).map(([fieldName, { runtimeMeta, formMeta, value }]) => (
+          <ListItem key={fieldName} disablePadding sx={{ display: 'block', mb: 2 }}>
+            <Paper variant="outlined" sx={{ p: 1 }}>
+              <Grid container alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Grid size="grow" sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle2" color="primary" noWrap>{fieldName}</Typography>
+                </Grid>
+                <Grid sx={{ flexShrink: 0 }}>
+                  <Chip
+                    label={runtimeMeta?.isVisible !== false ? "Visible" : "Hidden"}
+                    size="small"
+                    color={runtimeMeta?.isVisible !== false ? "success" : "default"}
+                    variant="outlined"
+                  />
+                </Grid>
+              </Grid>
+              {runtimeMeta?.isRequired && (
+                <Chip label="Required" size="small" color="warning" sx={{ mr: 0.5, mb: 0.5 }} />
+              )}
+              {runtimeMeta?.isDisabled && (
+                <Chip label="Disabled" size="small" color="default" sx={{ mr: 0.5, mb: 0.5 }} />
+              )}
 
-            <Box sx={{ mt: 1, bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                Value: {JSON.stringify(value)}
-              </Typography>
-            </Box>
-            {formMeta?.errors && formMeta.errors.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                {formMeta.errors.map((err: any, i: number) => (
-                  <Typography key={i} variant="caption" color="error" display="block">
-                    {err}
-                  </Typography>
-                ))}
+              <Box sx={{ mt: 1, bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                  Value: {JSON.stringify(value)}
+                </Typography>
               </Box>
-            )}
-            {runtimeMeta?.error && (
-              <Typography variant="caption" color="error" display="block">
-                Runtime Error: {runtimeMeta.error}
-              </Typography>
-            )}
-          </Paper>
-        </ListItem>
-      ))}
-    </List>
+              {formMeta?.errors && formMeta.errors.length > 0 && (
+                <Box sx={{ mt: 1 }}>
+                  {formMeta.errors.map((err: any, i: number) => (
+                    <Typography key={i} variant="caption" color="error" display="block">
+                      {err}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+              {runtimeMeta?.error && (
+                <Typography variant="caption" color="error" display="block">
+                  Runtime Error: {runtimeMeta.error}
+                </Typography>
+              )}
+            </Paper>
+          </ListItem>
+        ))}
+      </List>
+    </Box>
   );
 };
 
@@ -248,6 +267,14 @@ export const DevTools = () => {
     runtime.invalidateAndRefresh();
   };
 
+  function a11yProps(index: number) {
+    return {
+      id: `simple-tab-${index}`,
+      'aria-controls': `simple-tabpanel-${index}`,
+    };
+  }
+
+
   return (
     <>
       <Tooltip title="Open SchemaForm DevTools">
@@ -274,7 +301,7 @@ export const DevTools = () => {
           sx: { width: 400, maxWidth: "90vw" },
         }}
       >
-        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column", border: '1px solid #c01' }}>
           {/* Header */}
           <Box
             sx={{
@@ -317,7 +344,7 @@ export const DevTools = () => {
             variant="fullWidth"
             indicatorColor="primary"
             textColor="primary"
-            sx={{ borderBottom: 1, borderColor: "divider" }}
+            sx={{ borderBottom: 1, borderColor: "divider", border: '1px solid blue' }}
           >
             <Tab icon={<HistoryIcon />} label="Traces" />
             <Tab icon={<ListIcon />} label="Fields" />
@@ -325,7 +352,7 @@ export const DevTools = () => {
           </Tabs>
 
           {/* Content */}
-          <Box sx={{ flexGrow: 1, overflow: "hidden" }}>
+          <Box sx={{ flexGrow: 1, overflow: "hidden", border: '1px solid red' }}>
             <TabPanel value={tab} index={0}>
               {traces.length === 0 ? (
                 <Typography color="text.secondary" align="center" sx={{ mt: 4 }}>

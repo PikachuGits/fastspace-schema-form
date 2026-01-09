@@ -2,35 +2,35 @@ import React, { memo } from "react";
 import {
   FormControl,
   FormControlLabel,
-  Switch,
+  Checkbox,
   FormHelperText,
-  type SwitchProps,
+  type CheckboxProps,
 } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
-
+import { formControlStyles } from "./styles";
 import { renderLabel } from "./utils";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type SwitchWidgetRenderProps = WidgetProps & {
+export type CheckboxWidgetRenderProps = WidgetProps & {
   label?: string;
   helperText?: string;
-  switchProps?: Partial<SwitchProps>;
+  checkboxProps?: Partial<CheckboxProps>;
 };
 
-export type SwitchWidgetProps = {
+export type CheckboxWidgetProps = {
   form: any;
   name: string;
   validate?: any;
-} & Omit<SwitchWidgetRenderProps, keyof WidgetProps>;
+} & Omit<CheckboxWidgetRenderProps, keyof WidgetProps>;
 
 // ============================================================================
 // 纯渲染组件
 // ============================================================================
 
-export const SwitchWidgetRender = memo(function SwitchWidgetRender({
+export const CheckboxWidgetRender = memo(function CheckboxWidgetRender({
   value,
   onChange,
   onBlur,
@@ -40,8 +40,8 @@ export const SwitchWidgetRender = memo(function SwitchWidgetRender({
   visible = true,
   label,
   helperText,
-  switchProps,
-}: SwitchWidgetRenderProps) {
+  checkboxProps,
+}: CheckboxWidgetRenderProps) {
   if (!visible) return null;
 
   return (
@@ -49,15 +49,17 @@ export const SwitchWidgetRender = memo(function SwitchWidgetRender({
       error={!!error}
       disabled={disabled}
       required={required}
+      sx={formControlStyles}
     >
       <FormControlLabel
         control={
-          <Switch
+          <Checkbox
+            size="small"
             checked={!!value}
             onChange={(e) => onChange(e.target.checked)}
             onBlur={onBlur}
             disabled={disabled}
-            {...switchProps}
+            {...checkboxProps}
           />
         }
         label={renderLabel(label, required)}
@@ -73,7 +75,7 @@ export const SwitchWidgetRender = memo(function SwitchWidgetRender({
 // 独立组件
 // ============================================================================
 
-export const SwitchWidget: React.FC<SwitchWidgetProps> = ({
+export const CheckboxWidget: React.FC<CheckboxWidgetProps> = ({
   form,
   name,
   validate,
@@ -85,10 +87,10 @@ export const SwitchWidget: React.FC<SwitchWidgetProps> = ({
       name={name}
       validate={validate}
       render={(props: WidgetProps) => (
-        <SwitchWidgetRender {...props} {...uiProps} />
+        <CheckboxWidgetRender {...props} {...uiProps} />
       )}
     />
   );
 };
 
-export default SwitchWidgetRender;
+export default CheckboxWidgetRender;
