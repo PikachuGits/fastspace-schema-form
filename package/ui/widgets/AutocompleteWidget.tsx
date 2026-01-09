@@ -21,7 +21,6 @@ import {
 } from "@mui/material";
 import {
   Refresh as RefreshIcon,
-  Clear as ClearIcon,
   Add as AddIcon,
   Replay as ReplayIcon,
 } from "@mui/icons-material";
@@ -130,8 +129,6 @@ export type AutocompleteWidgetRenderProps = WidgetProps & {
   refreshOnOpen?: boolean;
   /** 搜索清空配置 */
   searchClearConfig?: SearchClearConfig;
-  /** 是否显示清空搜索按钮，默认 true */
-  showClearSearch?: boolean;
 };
 
 export type AutocompleteWidgetProps = {
@@ -189,6 +186,10 @@ interface InfiniteListboxProps extends React.HTMLAttributes<HTMLElement> {
   error?: boolean;
   onRetry?: () => void;
   loading?: boolean;
+  /** 保存的滚动位置 */
+  savedScrollTop?: number;
+  /** 滚动位置保存回调 */
+  onScrollPositionChange?: (scrollTop: number) => void;
 }
 
 const InfiniteAutocompleteListbox = forwardRef<
@@ -204,11 +205,30 @@ const InfiniteAutocompleteListbox = forwardRef<
     error,
     onRetry,
     loading,
+    savedScrollTop,
+    onScrollPositionChange,
     ...other
   } = props;
 
+  const innerRef = useRef<HTMLUListElement>(null);
+
+  // 合并 ref
+  React.useImperativeHandle(ref, () => innerRef.current as HTMLUListElement);
+
+  // 恢复滚动位置 (加载更多完成后)
+  React.useLayoutEffect(() => {
+    if (
+      savedScrollTop !== undefined &&
+      savedScrollTop > 0 &&
+      innerRef.current &&
+      !fetchingMore
+    ) {
+      innerRef.current.scrollTop = savedScrollTop;
+    }
+  }, [fetchingMore, savedScrollTop]);
+
   return (
-    <StyledUl {...other} ref={ref}>
+    <StyledUl {...other} ref={innerRef}>
       {/* 加载中状态 (首次加载) */}
       {loading && !fetchingMore && (
         <Box
@@ -344,7 +364,6 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   autoSelectNewOption = false,
   refreshOnOpen = false,
   searchClearConfig = {},
-  showClearSearch = true,
 }: AutocompleteWidgetRenderProps) {
   if (!visible) return null;
 
@@ -370,6 +389,10 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   const [fetchError, setFetchError] = useState(false);
   const [cachedKeyword, setCachedKeyword] = useState<string>("");
   const [showRestoreHint, setShowRestoreHint] = useState(false);
+  // 保存滚动位置 (用于加载更多时恢复)
+  const [savedScrollTop, setSavedScrollTop] = useState<number>(0);
+  // 本地搜索输入值 (用于计算过滤后的选项数量)
+  const [localInputValue, setLocalInputValue] = useState("");
 
   // 记录选中的选项
   const selectedOptionsRef = useRef<OptionItem[]>([]);
@@ -384,7 +407,25 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   // 当前使用的选项
   const currentOptions = remoteConfig ? localOptions : options;
   const pageSize = remoteConfig?.pageSize ?? 20;
-  const hasOptions = currentOptions.length > 0;
+
+  // 计算实际显示的选项数量 (考虑本地过滤)
+  const filteredOptionsCount = React.useMemo(() => {
+    if (remoteConfig) {
+      // 远程模式：选项已经是过滤后的
+      return currentOptions.length;
+    }
+    // 本地模式：模拟 MUI Autocomplete 的默认过滤逻辑
+    if (!localInputValue) {
+      return currentOptions.length;
+    }
+    const searchLower = localInputValue.toLowerCase();
+    return currentOptions.filter((opt) => {
+      const optionLabel = typeof opt === "object" ? opt.label : String(opt);
+      return optionLabel.toLowerCase().includes(searchLower);
+    }).length;
+  }, [currentOptions, localInputValue, remoteConfig]);
+
+  const hasOptions = filteredOptionsCount > 0;
 
   // 规范化选项
   const normalizedOptions = currentOptions.map((opt) =>
@@ -644,6 +685,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
     if (reason === "reset") return;
     setInputValue(newInputValue);
     setShowRestoreHint(false);
+    // 更新本地输入值 (用于计算过滤后的选项数量)
+    setLocalInputValue(newInputValue);
 
     if (!remoteConfig) return;
 
@@ -656,6 +699,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       setPage(1);
       setHasMore(true);
       setFetchError(false);
+      // 重置滚动位置
+      setSavedScrollTop(0);
 
       debounceRef.current = setTimeout(() => {
         fetchOptions(newInputValue, 1, false);
@@ -665,7 +710,10 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
 
   // 滚动加载
   const handleScroll = (event: React.SyntheticEvent) => {
-    const listboxNode = event.currentTarget;
+    const listboxNode = event.currentTarget as HTMLElement;
+    // 保存当前滚动位置
+    setSavedScrollTop(listboxNode.scrollTop);
+
     if (
       !loading &&
       !fetchingMore &&
@@ -678,12 +726,6 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       setPage(nextPage);
       fetchOptions(inputValue, nextPage, true);
     }
-  };
-
-  // 手动清空搜索
-  const handleClearSearch = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    clearSearch(!clearValueOnly);
   };
 
   // 清理定时器
@@ -770,20 +812,6 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       );
     }
 
-    // 清空搜索按钮
-    if (showClearSearch && inputValue && remoteConfig && !disabled) {
-      elements.push(
-        <IconButton
-          key="clear-search"
-          size="small"
-          onClick={handleClearSearch}
-          sx={{ p: 0.5 }}
-        >
-          <ClearIcon fontSize="small" />
-        </IconButton>
-      );
-    }
-
     // 恢复搜索按钮
     if (
       cacheSearchKeyword &&
@@ -857,7 +885,7 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       loading={loading || userLoading}
       filterOptions={remoteConfig ? (x) => x : undefined}
       inputValue={remoteConfig ? inputValue : undefined}
-      onInputChange={remoteConfig ? handleInputChange : undefined}
+      onInputChange={handleInputChange}
       getOptionLabel={(option) =>
         (option as OptionItem)?.label ||
         String((option as OptionItem)?.value) ||
@@ -917,6 +945,7 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
                 error: fetchError,
                 onRetry: handleRetry,
                 loading,
+                savedScrollTop,
               }
             : {}),
         } as any,
@@ -935,14 +964,12 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
           {(option as OptionItem).listLabel ?? (option as OptionItem).label}
         </li>
       )}
-      renderTags={(tagValue, getTagProps) =>
-        tagValue.map((option, index) => (
+      renderValue={(tagValue, getTagProps) =>
+        tagValue.map((option: OptionItem, index: number) => (
           <Chip
-            label={(option as OptionItem).label}
+            label={option.label}
             {...getTagProps({ index })}
-            key={
-              (option as OptionItem).key ?? String((option as OptionItem).value)
-            }
+            key={option.key ?? String(option.value)}
             size="small"
           />
         ))

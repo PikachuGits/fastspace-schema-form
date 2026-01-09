@@ -190,9 +190,9 @@ const basicWidgetsSchema: SchemaInput = {
         { label: "Nuxt.js", value: "nuxtjs" },
       ],
       ui: {
-        label: "自动完成 (Autocomplete)",
+        label: "基础自动完成",
         placeholder: "搜索框架...",
-        helperText: "支持搜索过滤",
+        helperText: "本地数据单选",
       },
     },
     {
@@ -213,6 +213,323 @@ const basicWidgetsSchema: SchemaInput = {
         placeholder: "选择编程语言...",
         multiple: true,
         helperText: "支持多选",
+      },
+    },
+    {
+      name: "autocompleteFreeSolo",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      options: [
+        { label: "苹果", value: "apple" },
+        { label: "香蕉", value: "banana" },
+        { label: "橙子", value: "orange" },
+        { label: "葡萄", value: "grape" },
+      ],
+      ui: {
+        label: "自由输入模式",
+        placeholder: "可输入或选择...",
+        freeSolo: true,
+        helperText: "freeSolo: 可输入不在列表中的值",
+      },
+    },
+    {
+      name: "autocompleteListLabel",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      options: [
+        { label: "北京", value: "bj", listLabel: "北京市 (BJ) - 首都" },
+        { label: "上海", value: "sh", listLabel: "上海市 (SH) - 直辖市" },
+        { label: "广州", value: "gz", listLabel: "广州市 (GZ) - 广东省会" },
+        { label: "深圳", value: "sz", listLabel: "深圳市 (SZ) - 经济特区" },
+      ],
+      ui: {
+        label: "自定义列表显示",
+        placeholder: "选择城市...",
+        helperText: "listLabel: 下拉列表与选中显示不同",
+      },
+    },
+    {
+      name: "autocompleteRemote",
+      component: "Autocomplete",
+      colSpan: { xs: 12 },
+      ui: {
+        label: "远程搜索 + 分页加载",
+        placeholder: "输入关键字搜索员工...",
+        helperText:
+          "支持远程搜索、分页加载、loadMoreLoading 状态、加载失败重试",
+        remoteConfig: {
+          pageSize: 10,
+          debounceTimeout: 300,
+          minSearchLength: 0,
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            // 模拟 API 请求延迟
+            await new Promise((resolve) => setTimeout(resolve, 600));
+
+            // 模拟随机失败（10%概率）
+            // if (Math.random() < 0.1) {
+            //   throw new Error("网络错误");
+            // }
+
+            // 模拟 100 条员工数据
+            const allEmployees = Array.from({ length: 100 }, (_, i) => ({
+              label: `员工${i + 1}`,
+              value: `emp-${i + 1}`,
+              listLabel: `员工${i + 1} - ${
+                ["技术部", "产品部", "设计部", "运营部", "市场部"][i % 5]
+              }`,
+            }));
+
+            // 关键字过滤
+            const filtered = keyword
+              ? allEmployees.filter((e) =>
+                  e.label.toLowerCase().includes(keyword.toLowerCase())
+                )
+              : allEmployees;
+
+            // 分页
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            const data = filtered.slice(start, end);
+
+            return {
+              data,
+              total: filtered.length,
+              hasMore: end < filtered.length,
+            };
+          },
+          fetchById: async (value: string | number) => {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            const id = Number(String(value).replace("emp-", ""));
+            if (id >= 1 && id <= 100) {
+              return {
+                label: `员工${id}`,
+                value: `emp-${id}`,
+              };
+            }
+            return null;
+          },
+        },
+      },
+    },
+    {
+      name: "autocompleteRemoteMultiple",
+      component: "Autocomplete",
+      defaultValue: [],
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "远程搜索多选",
+        placeholder: "搜索并选择多个标签...",
+        multiple: true,
+        helperText: "远程搜索 + 多选模式",
+        remoteConfig: {
+          pageSize: 15,
+          debounceTimeout: 300,
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+
+            const allTags = Array.from({ length: 50 }, (_, i) => ({
+              label: `标签${i + 1}`,
+              value: `tag-${i + 1}`,
+            }));
+
+            const filtered = keyword
+              ? allTags.filter((t) =>
+                  t.label.toLowerCase().includes(keyword.toLowerCase())
+                )
+              : allTags;
+
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+
+            return {
+              data: filtered.slice(start, end),
+              total: filtered.length,
+              hasMore: end < filtered.length,
+            };
+          },
+        },
+      },
+    },
+    {
+      name: "autocompleteRefreshOnOpen",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "每次展开刷新",
+        placeholder: "每次打开下拉都重新加载...",
+        helperText: "refreshOnOpen: true",
+        refreshOnOpen: true,
+        remoteConfig: {
+          pageSize: 10,
+          fetchOptions: async (
+            _keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            // 每次返回带时间戳的数据，验证刷新效果
+            const now = new Date().toLocaleTimeString();
+            const data = Array.from(
+              { length: Math.min(pageSize, 20) },
+              (_, i) => ({
+                label: `项目${(page - 1) * pageSize + i + 1} (${now})`,
+                value: `item-${(page - 1) * pageSize + i + 1}`,
+              })
+            );
+            return {
+              data,
+              total: 20,
+              hasMore: page * pageSize < 20,
+            };
+          },
+        },
+      },
+    },
+    {
+      name: "autocompleteSuffixButton",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      options: [
+        { label: "已有选项1", value: "existing1" },
+        { label: "已有选项2", value: "existing2" },
+      ],
+      ui: {
+        label: "带新增按钮",
+        placeholder: "搜索或新增...",
+        helperText: "suffixButton: 无匹配结果时显示新增按钮",
+        suffixButton: (searchValue: string, hasOptions: boolean) => {
+          // 搜索值非空且无匹配选项时显示按钮
+          if (searchValue && !hasOptions) {
+            return {
+              tooltip: `新增 "${searchValue}"`,
+              onClick: () => {
+                alert(`点击新增按钮，当前搜索值: ${searchValue}`);
+              },
+            };
+          }
+          return null;
+        },
+      },
+    },
+    {
+      name: "autocompleteCacheSearch",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "缓存搜索关键词",
+        placeholder: "输入搜索后悬停可恢复...",
+        helperText: "cacheSearchKeyword: 清空后可恢复上次搜索",
+        searchClearConfig: {
+          cacheSearchKeyword: true,
+          keepSearchOnSelect: false,
+        },
+        remoteConfig: {
+          pageSize: 10,
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            const allData = Array.from({ length: 30 }, (_, i) => ({
+              label: `搜索项${i + 1}`,
+              value: `search-${i + 1}`,
+            }));
+            const filtered = keyword
+              ? allData.filter((d) => d.label.includes(keyword))
+              : allData;
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            return {
+              data: filtered.slice(start, end),
+              total: filtered.length,
+              hasMore: end < filtered.length,
+            };
+          },
+        },
+      },
+    },
+    {
+      name: "autocompleteKeepSearch",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "保持搜索值",
+        placeholder: "选中后保持搜索值...",
+        helperText: "keepSearchOnSelect + keepSearchOnClose",
+        searchClearConfig: {
+          keepSearchOnSelect: true,
+          keepSearchOnClose: true,
+        },
+        remoteConfig: {
+          pageSize: 10,
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            const allData = Array.from({ length: 25 }, (_, i) => ({
+              label: `选项${i + 1}`,
+              value: `opt-${i + 1}`,
+            }));
+            const filtered = keyword
+              ? allData.filter((d) =>
+                  d.label.toLowerCase().includes(keyword.toLowerCase())
+                )
+              : allData;
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            return {
+              data: filtered.slice(start, end),
+              total: filtered.length,
+              hasMore: end < filtered.length,
+            };
+          },
+        },
+      },
+    },
+    {
+      name: "autocompleteMinSearchLength",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "最小搜索字符",
+        placeholder: "至少输入2个字符...",
+        helperText: "minSearchLength: 2",
+        remoteConfig: {
+          pageSize: 10,
+          minSearchLength: 2,
+          fetchOptions: async (
+            keyword: string,
+            page: number,
+            pageSize: number
+          ) => {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            const allData = Array.from({ length: 40 }, (_, i) => ({
+              label: `数据项${i + 1}`,
+              value: `data-${i + 1}`,
+            }));
+            const filtered = keyword
+              ? allData.filter((d) => d.label.includes(keyword))
+              : allData;
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            return {
+              data: filtered.slice(start, end),
+              total: filtered.length,
+              hasMore: end < filtered.length,
+            };
+          },
+        },
       },
     },
 

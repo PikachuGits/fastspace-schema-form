@@ -1,11 +1,15 @@
-import React, { memo } from "react";
+import React, { memo, useMemo, useCallback } from "react";
 import { TimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import "dayjs/locale/zh-cn";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles, TIME_FORMAT } from "./styles";
 import { renderLabel } from "./utils";
+
+// 启用 customParseFormat 插件以支持精确的时间格式解析
+dayjs.extend(customParseFormat);
 
 // ============================================================================
 // Types
@@ -16,6 +20,10 @@ export type TimeWidgetRenderProps = WidgetProps & {
   helperText?: string;
   format?: string;
   ampm?: boolean;
+  /** 分钟步长，默认 1 */
+  minutesStep?: number;
+  /** 秒步长，默认无 */
+  secondsStep?: number;
 };
 
 export type TimeWidgetProps = {
@@ -40,20 +48,45 @@ export const TimeWidgetRender = memo(function TimeWidgetRender({
   helperText,
   format = TIME_FORMAT,
   ampm = false,
+  minutesStep = 1,
+  secondsStep,
 }: TimeWidgetRenderProps) {
   if (!visible) return null;
 
   // 将字符串值转换为 Dayjs 对象
-  const timeValue: Dayjs | null = value ? dayjs(value, format) : null;
+  const timeValue: Dayjs | null = useMemo(() => {
+    if (!value) return null;
+    // 使用 strict 模式解析时间字符串
+    const parsed = dayjs(value, format, true);
+    if (parsed.isValid()) return parsed;
+    // 尝试作为完整日期时间解析（兼容其他格式）
+    const fallback = dayjs(value);
+    return fallback.isValid() ? fallback : null;
+  }, [value, format]);
+
+  // 处理时间变化
+  const handleChange = useCallback(
+    (newValue: Dayjs | null) => {
+      if (!newValue || !newValue.isValid()) {
+        onChange(null);
+        return;
+      }
+      // 格式化为字符串存储
+      onChange(newValue.format(format));
+    },
+    [onChange, format]
+  );
 
   return (
     <LocalizationProvider adapterLocale="zh-cn" dateAdapter={AdapterDayjs}>
       <TimePicker
         value={timeValue}
-        onChange={(val) => onChange(val?.isValid() ? val.format(format) : null)}
+        onChange={handleChange}
         format={format}
         ampm={ampm}
         disabled={disabled}
+        minutesStep={minutesStep}
+        {...(secondsStep ? { secondsStep } : {})}
         slotProps={{
           textField: {
             fullWidth: true,
@@ -64,6 +97,10 @@ export const TimeWidgetRender = memo(function TimeWidgetRender({
             size: "small",
             sx: compactFieldStyles,
             onBlur,
+          },
+          // 修复时间选择器点击问题
+          actionBar: {
+            actions: ["clear", "accept"],
           },
         }}
       />
@@ -94,4 +131,3 @@ export const TimeWidget: React.FC<TimeWidgetProps> = ({
 };
 
 export default TimeWidgetRender;
-
