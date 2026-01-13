@@ -1,8 +1,9 @@
-import React, { memo, useState, useCallback } from "react";
+import React, { memo, useState, useCallback, useRef } from "react";
 import {
   FormControl,
   InputLabel,
   Select,
+  type SelectProps,
   MenuItem,
   FormHelperText,
   Chip,
@@ -73,6 +74,8 @@ export type SelectWidgetRenderProps = WidgetProps & {
       appendLocalOption: (option: OptionItem) => void;
     }
   ) => void;
+  onClose?: SelectProps["onClose"];
+  MenuProps?: SelectProps["MenuProps"];
 };
 
 export type SelectWidgetProps = {
@@ -105,6 +108,8 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
   showAddSuffix = false,
   autoSelectNewOption = false,
   onAddOptionSuccess,
+  onClose,
+  MenuProps,
 }: SelectWidgetRenderProps) {
   if (!visible) return null;
 
@@ -117,15 +122,25 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
   // 规范化选项
   const normalizedOptions: OptionItem[] = Array.isArray(mergedOptions)
     ? mergedOptions.map((opt) => {
-        if (typeof opt === "object") {
-          return {
-            ...opt,
-            label: String(opt[optionLabelProp] ?? opt.label ?? ""),
-            value: opt[optionValueProp] ?? opt.value,
-          };
-        }
-        return { label: String(opt), value: opt };
-      })
+      if (typeof opt === "object") {
+        const rawValue = (opt as any)[optionValueProp] ?? (opt as any).value;
+        const normalizedValue: OptionItem["value"] =
+          rawValue === null || rawValue === undefined
+            ? null
+            : typeof rawValue === "string" ||
+              typeof rawValue === "number" ||
+              typeof rawValue === "boolean"
+              ? rawValue
+              : String(rawValue);
+
+        return {
+          ...opt,
+          label: String(opt[optionLabelProp] ?? opt.label ?? ""),
+          value: normalizedValue,
+        };
+      }
+      return { label: String(opt), value: opt };
+    })
     : [];
 
   const hasOptions = normalizedOptions.length > 0;
@@ -172,7 +187,7 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
 
     if (typeof showAddSuffix === "function") {
       const result = showAddSuffix(hasOptions);
-      if (!result || result === false) return null;
+      if (!result) return null;
       return result;
     }
 
@@ -199,6 +214,13 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
 
   // 生成唯一的 label id
   const labelId = `select-label-${label || "default"}`;
+  const ref = useRef<HTMLDivElement>(null);
+  const handleClose: SelectProps["onClose"] = (event) => {
+    console.log("handleClose", event);
+    onClose?.(event);
+    // onBlur();
+    ref.current?.blur();
+  };
 
   return (
     <FormControl
@@ -215,11 +237,13 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
         </InputLabel>
       )}
       <Select
+        ref={ref}
         labelId={labelId}
         multiple={multiple}
         value={multiple ? (Array.isArray(value) ? value : []) : (value ?? "")}
         onChange={handleChange}
         onBlur={onBlur}
+        onClose={handleClose}
         input={<OutlinedInput label={label} />}
         displayEmpty={!label}
         renderValue={(selected) => {
@@ -243,10 +267,10 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
                     onDelete={
                       !disabled
                         ? (e) => {
-                            e.stopPropagation();
-                            const newValue = selectedArray.filter((v) => v !== val);
-                            onChange(newValue);
-                          }
+                          e.stopPropagation();
+                          const newValue = selectedArray.filter((v) => v !== val);
+                          onChange(newValue);
+                        }
                         : undefined
                     }
                   />
@@ -298,9 +322,12 @@ export const SelectWidgetRender = memo(function SelectWidgetRender({
           </Box>
         }
         MenuProps={{
+          ...(MenuProps ?? {}),
           PaperProps: {
+            ...(MenuProps as any)?.PaperProps,
             sx: {
               maxHeight: 260,
+              ...((MenuProps as any)?.PaperProps?.sx ?? {}),
             },
           },
         }}

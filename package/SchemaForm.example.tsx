@@ -10,10 +10,21 @@ import {
   Tabs,
   Tab,
   Chip,
+  DialogTitle,
+  Dialog,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  FormHelperText,
+  InputAdornment,
 } from "@mui/material";
 import { SchemaForm, type SchemaFormInstance } from "./ui/SchemaForm";
 import type { SchemaInput } from "./types";
 import { rulesToValibot } from "./core/validation/rulesAdapter";
+// presetToSchema 已不再需要，validate 支持直接使用预设规则数组
+// import { presetToSchema } from "./core/validation/presets";
 import * as v from "valibot";
 
 // ============================================================================
@@ -402,20 +413,58 @@ const basicWidgetsSchema: SchemaInput = {
         { label: "已有选项2", value: "existing2" },
       ],
       ui: {
-        label: "带新增按钮",
+        label: "带新增按钮 (替代箭头)",
         placeholder: "搜索或新增...",
-        helperText: "suffixButton: 无匹配结果时显示新增按钮",
-        suffixButton: (searchValue: string, hasOptions: boolean) => {
-          // 搜索值非空且无匹配选项时显示按钮
-          if (searchValue && !hasOptions) {
-            return {
-              tooltip: `新增 "${searchValue}"`,
-              onClick: () => {
-                alert(`点击新增按钮，当前搜索值: ${searchValue}`);
-              },
-            };
-          }
-          return null;
+        helperText: "suffixButton 自动替代三角箭头位置",
+        suffixButton: (_searchValue: string, _hasOptions: boolean) => {
+          // 全程显示新增按钮，替代三角箭头
+          return {
+            tooltip: "新增选项",
+            onClick: () => {
+              alert("点击新增按钮");
+            },
+          };
+        },
+      },
+    },
+    {
+      name: "autocompleteSuffixCustomIcon",
+      component: "Autocomplete",
+      colSpan: { xs: 12, md: 6 },
+      options: [
+        { label: "选项A", value: "a" },
+        { label: "选项B", value: "b" },
+      ],
+      ui: {
+        label: "自定义图标",
+        placeholder: "自定义图标样式...",
+        helperText: "icon: 自定义图标，MUI 自动包裹按钮",
+        suffixButton: (_searchValue: string, _hasOptions: boolean) => {
+          const [open, setOpen] = React.useState(false);
+          return {
+            // 自定义图标内容 (注意：不要使用 Button，MUI 会自动包裹 IconButton)
+            icon: (
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  color: "primary.main",
+                  // border: "1px solid #000",
+                  padding: "4px 6px",
+                }}
+              >
+                新增
+                <Dialog open={open}>
+                  <DialogTitle>Set backup account</DialogTitle>
+                </Dialog>
+              </Typography>
+            ),
+            // tooltip: "新增选项",
+            onClick: () => {
+              setOpen(true);
+            },
+          };
         },
       },
     },
@@ -1164,7 +1213,7 @@ const validationSchema: SchemaInput = {
     {
       name: "declarativeField",
       component: "Text",
-      colSpan: { xs: 12 },
+      colSpan: { xs: 12, md: 6 },
       validate: rulesToValibot(
         [
           { type: "required", message: "此字段必填" },
@@ -1177,6 +1226,99 @@ const validationSchema: SchemaInput = {
         label: "声明式验证规则",
         placeholder: "3-20个字符",
         helperText: "使用 rulesToValibot 转换声明式规则",
+      },
+    },
+
+    // ==================== 使用预设规则数组（推荐）====================
+    // 直接在 validate 字段使用 [{type: 'xxx'}] 格式，框架自动转换
+    {
+      name: "presetRequired",
+      component: "Text",
+      colSpan: { xs: 12, md: 6 },
+      // 直接使用预设规则数组
+      validate: [{ type: "required", message: "必填项" }],
+      ui: {
+        label: "预设规则 - 必填",
+        placeholder: "validate: [{type:'required'}]",
+        helperText: "最简预设语法，直接在 validate 中使用数组",
+      },
+    },
+    {
+      name: "presetEmail",
+      component: "Text",
+      colSpan: { xs: 12, md: 6 },
+      // 组合多个预设
+      validate: [
+        { type: "required", message: "邮箱必填" },
+        { type: "email", message: "请输入有效邮箱" },
+      ],
+      ui: {
+        label: "预设规则 - 邮箱",
+        placeholder: "example@domain.com",
+        helperText: "[{type:'required'}, {type:'email'}]",
+      },
+    },
+    {
+      name: "presetPhone",
+      component: "Text",
+      colSpan: { xs: 12, md: 6 },
+      // 使用内置手机号验证
+      validate: [
+        { type: "required", message: "手机号必填" },
+        { type: "phone", message: "请输入有效手机号" },
+      ],
+      ui: {
+        label: "预设规则 - 手机号",
+        placeholder: "13800138000",
+        helperText: "内置中国大陆手机号验证",
+      },
+    },
+    {
+      name: "presetIdCard",
+      component: "Text",
+      colSpan: { xs: 12, md: 6 },
+      // 使用内置身份证验证
+      validate: [{ type: "idCard", message: "请输入有效身份证号" }],
+      ui: {
+        label: "预设规则 - 身份证",
+        placeholder: "18位身份证号",
+        helperText: "内置中国大陆身份证验证",
+      },
+    },
+    {
+      name: "presetWithParams",
+      component: "Text",
+      colSpan: { xs: 12, md: 6 },
+      // 带参数的预设规则
+      validate: [
+        { type: "required", message: "用户名必填" },
+        { type: "minLength", value: 5, message: "用户名至少5个字符" },
+        { type: "maxLength", value: 20, message: "用户名最多20个字符" },
+        { type: "alphanumeric", message: "只能包含字母和数字" },
+      ],
+      ui: {
+        label: "预设规则 - 带参数",
+        placeholder: "5-20位字母数字",
+        helperText: "组合多个带参数的预设规则",
+      },
+    },
+    {
+      name: "presetNumber",
+      component: "Number",
+      defaultValue: 0,
+      colSpan: { xs: 12, md: 6 },
+      // 数值预设规则
+      validate: [
+        { type: "required", message: "数量必填" },
+        { type: "min", value: 0, message: "不能为负数" },
+        { type: "max", value: 100, message: "不能超过100" },
+        { type: "integer", message: "必须是整数" },
+      ],
+      ui: {
+        label: "预设规则 - 数值",
+        min: 0,
+        max: 100,
+        helperText: "整数，范围 0-100",
       },
     },
   ],
@@ -1762,6 +1904,562 @@ const comprehensiveSchema: SchemaInput = {
 };
 
 // ============================================================================
+// 示例 9: 组合表单 - 复合输入组件
+// ============================================================================
+
+// 电话号码组合组件 (区号 + 手机号)
+const PhoneInputComponent: React.FC<{
+  value: { areaCode: string; number: string };
+  onChange: (val: { areaCode: string; number: string }) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  label?: string;
+  helperText?: string;
+}> = ({
+  value = { areaCode: "+86", number: "" },
+  onChange,
+  onBlur,
+  disabled,
+  error,
+  required,
+  label,
+  helperText,
+}) => {
+  const areaCodeOptions = [
+    { label: "中国 +86", value: "+86" },
+    { label: "美国 +1", value: "+1" },
+    { label: "英国 +44", value: "+44" },
+    { label: "日本 +81", value: "+81" },
+    { label: "韩国 +82", value: "+82" },
+    { label: "香港 +852", value: "+852" },
+    { label: "台湾 +886", value: "+886" },
+  ];
+
+  return (
+    <FormControl fullWidth error={!!error} size="small">
+      {label && (
+        <Typography
+          variant="body2"
+          sx={{ mb: 0.5, fontWeight: 500 }}
+          color={error ? "error" : "text.primary"}
+        >
+          {label}
+          {required && (
+            <Typography component="span" color="error.main">
+              {" "}
+              *
+            </Typography>
+          )}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1}>
+        <Select
+          value={value?.areaCode || "+86"}
+          onChange={(e) =>
+            onChange({ ...value, areaCode: e.target.value as string })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          sx={{ width: 140, flexShrink: 0 }}
+          size="small"
+        >
+          {areaCodeOptions.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+        <TextField
+          fullWidth
+          value={value?.number || ""}
+          onChange={(e) => onChange({ ...value, number: e.target.value })}
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          placeholder="请输入手机号"
+          size="small"
+        />
+      </Stack>
+      {(error || helperText) && (
+        <FormHelperText error={!!error}>{error || helperText}</FormHelperText>
+      )}
+    </FormControl>
+  );
+};
+
+// 价格组合组件 (货币 + 金额)
+const PriceInputComponent: React.FC<{
+  value: { currency: string; amount: number | string };
+  onChange: (val: { currency: string; amount: number | string }) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  label?: string;
+  helperText?: string;
+}> = ({
+  value = { currency: "CNY", amount: "" },
+  onChange,
+  onBlur,
+  disabled,
+  error,
+  required,
+  label,
+  helperText,
+}) => {
+  const currencyOptions = [
+    { label: "¥ 人民币", value: "CNY", symbol: "¥" },
+    { label: "$ 美元", value: "USD", symbol: "$" },
+    { label: "€ 欧元", value: "EUR", symbol: "€" },
+    { label: "£ 英镑", value: "GBP", symbol: "£" },
+    { label: "¥ 日元", value: "JPY", symbol: "¥" },
+  ];
+
+  const currentCurrency = currencyOptions.find(
+    (c) => c.value === value?.currency
+  );
+
+  return (
+    <FormControl fullWidth error={!!error} size="small">
+      {label && (
+        <Typography
+          variant="body2"
+          sx={{ mb: 0.5, fontWeight: 500 }}
+          color={error ? "error" : "text.primary"}
+        >
+          {label}
+          {required && (
+            <Typography component="span" color="error.main">
+              {" "}
+              *
+            </Typography>
+          )}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1}>
+        <Select
+          value={value?.currency || "CNY"}
+          onChange={(e) =>
+            onChange({ ...value, currency: e.target.value as string })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          sx={{ width: 130, flexShrink: 0 }}
+          size="small"
+        >
+          {currencyOptions.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+        <TextField
+          fullWidth
+          type="number"
+          value={value?.amount ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              amount: e.target.value ? Number(e.target.value) : "",
+            })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          placeholder="请输入金额"
+          size="small"
+          slotProps={{
+            input: {
+              startAdornment: currentCurrency && (
+                <InputAdornment position="start">
+                  {currentCurrency.symbol}
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Stack>
+      {(error || helperText) && (
+        <FormHelperText error={!!error}>{error || helperText}</FormHelperText>
+      )}
+    </FormControl>
+  );
+};
+
+// 日期范围组合组件
+const DateRangeComponent: React.FC<{
+  value: { start: string; end: string };
+  onChange: (val: { start: string; end: string }) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  label?: string;
+  helperText?: string;
+}> = ({
+  value = { start: "", end: "" },
+  onChange,
+  onBlur,
+  disabled,
+  error,
+  required,
+  label,
+  helperText,
+}) => {
+  return (
+    <FormControl fullWidth error={!!error} size="small">
+      {label && (
+        <Typography
+          variant="body2"
+          sx={{ mb: 0.5, fontWeight: 500 }}
+          color={error ? "error" : "text.primary"}
+        >
+          {label}
+          {required && (
+            <Typography component="span" color="error.main">
+              {" "}
+              *
+            </Typography>
+          )}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField
+          type="date"
+          value={value?.start || ""}
+          onChange={(e) => onChange({ ...value, start: e.target.value })}
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          size="small"
+          sx={{ flex: 1 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
+        />
+        <Typography color="text.secondary">至</Typography>
+        <TextField
+          type="date"
+          value={value?.end || ""}
+          onChange={(e) => onChange({ ...value, end: e.target.value })}
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          size="small"
+          sx={{ flex: 1 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
+        />
+      </Stack>
+      {(error || helperText) && (
+        <FormHelperText error={!!error}>{error || helperText}</FormHelperText>
+      )}
+    </FormControl>
+  );
+};
+
+// 尺寸组合组件 (长 x 宽 x 高)
+const DimensionsComponent: React.FC<{
+  value: {
+    length: number | string;
+    width: number | string;
+    height: number | string;
+    unit: string;
+  };
+  onChange: (val: {
+    length: number | string;
+    width: number | string;
+    height: number | string;
+    unit: string;
+  }) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  label?: string;
+  helperText?: string;
+}> = ({
+  value = { length: "", width: "", height: "", unit: "cm" },
+  onChange,
+  onBlur,
+  disabled,
+  error,
+  required,
+  label,
+  helperText,
+}) => {
+  return (
+    <FormControl fullWidth error={!!error} size="small">
+      {label && (
+        <Typography
+          variant="body2"
+          sx={{ mb: 0.5, fontWeight: 500 }}
+          color={error ? "error" : "text.primary"}
+        >
+          {label}
+          {required && (
+            <Typography component="span" color="error.main">
+              {" "}
+              *
+            </Typography>
+          )}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField
+          type="number"
+          value={value?.length ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              length: e.target.value ? Number(e.target.value) : "",
+            })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          placeholder="长"
+          size="small"
+          sx={{ flex: 1 }}
+        />
+        <Typography color="text.secondary">×</Typography>
+        <TextField
+          type="number"
+          value={value?.width ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              width: e.target.value ? Number(e.target.value) : "",
+            })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          placeholder="宽"
+          size="small"
+          sx={{ flex: 1 }}
+        />
+        <Typography color="text.secondary">×</Typography>
+        <TextField
+          type="number"
+          value={value?.height ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              height: e.target.value ? Number(e.target.value) : "",
+            })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          error={!!error}
+          placeholder="高"
+          size="small"
+          sx={{ flex: 1 }}
+        />
+        <Select
+          value={value?.unit || "cm"}
+          onChange={(e) =>
+            onChange({ ...value, unit: e.target.value as string })
+          }
+          onBlur={onBlur}
+          disabled={disabled}
+          sx={{ width: 80, flexShrink: 0 }}
+          size="small"
+        >
+          <MenuItem value="mm">mm</MenuItem>
+          <MenuItem value="cm">cm</MenuItem>
+          <MenuItem value="m">m</MenuItem>
+          <MenuItem value="in">in</MenuItem>
+        </Select>
+      </Stack>
+      {(error || helperText) && (
+        <FormHelperText error={!!error}>{error || helperText}</FormHelperText>
+      )}
+    </FormControl>
+  );
+};
+
+const compositeSchema: SchemaInput = {
+  meta: { version: "1.0.0" },
+  fields: [
+    // 电话号码组合
+    {
+      name: "phone",
+      component: "Custom",
+      defaultValue: { areaCode: "+86", number: "" },
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "联系电话",
+        helperText: "选择区号并输入手机号",
+        component: PhoneInputComponent,
+      },
+    },
+
+    // 价格组合
+    {
+      name: "price",
+      component: "Custom",
+      defaultValue: { currency: "CNY", amount: "" },
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "商品价格",
+        helperText: "选择货币类型并输入金额",
+        component: PriceInputComponent,
+      },
+    },
+
+    // 日期范围组合
+    {
+      name: "dateRange",
+      component: "Custom",
+      defaultValue: { start: "", end: "" },
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "有效期",
+        helperText: "选择开始和结束日期",
+        component: DateRangeComponent,
+      },
+    },
+
+    // 尺寸组合
+    {
+      name: "dimensions",
+      component: "Custom",
+      defaultValue: { length: "", width: "", height: "", unit: "cm" },
+      colSpan: { xs: 12, md: 6 },
+      ui: {
+        label: "包装尺寸",
+        helperText: "输入长宽高，选择单位",
+        component: DimensionsComponent,
+      },
+    },
+
+    // 使用 Group + 多字段实现的组合方式（备选方案）
+    {
+      name: "addressGroup",
+      component: "Group",
+      colSpan: { xs: 12 },
+      ui: {
+        label: "收货地址（Group 组合方式）",
+        helperText: "使用 Group 组件将多个字段组合在一起",
+        variant: "card",
+      },
+      children: [
+        {
+          name: "country",
+          component: "Select",
+          defaultValue: "CN",
+          colSpan: { xs: 12, md: 3 },
+          options: [
+            { label: "中国", value: "CN" },
+            { label: "美国", value: "US" },
+            { label: "英国", value: "UK" },
+            { label: "日本", value: "JP" },
+          ],
+          ui: {
+            label: "国家/地区",
+          },
+        },
+        {
+          name: "province",
+          component: "Text",
+          colSpan: { xs: 12, md: 3 },
+          ui: {
+            label: "省份",
+            placeholder: "请输入省份",
+          },
+        },
+        {
+          name: "city",
+          component: "Text",
+          colSpan: { xs: 12, md: 3 },
+          ui: {
+            label: "城市",
+            placeholder: "请输入城市",
+          },
+        },
+        {
+          name: "zipCode",
+          component: "Text",
+          colSpan: { xs: 12, md: 3 },
+          ui: {
+            label: "邮编",
+            placeholder: "请输入邮编",
+          },
+        },
+        {
+          name: "addressDetail",
+          component: "Text",
+          colSpan: { xs: 12 },
+          ui: {
+            label: "详细地址",
+            placeholder: "请输入详细地址（街道、门牌号等）",
+            multiline: true,
+            rows: 2,
+          },
+        },
+      ],
+    },
+
+    // 使用 inline 布局实现紧凑组合
+    {
+      name: "quantity",
+      component: "Number",
+      defaultValue: 1,
+      colSpan: { xs: 6, md: 3 },
+      ui: {
+        label: "数量",
+        min: 1,
+        max: 999,
+      },
+    },
+    {
+      name: "unit",
+      component: "Select",
+      defaultValue: "piece",
+      colSpan: { xs: 6, md: 3 },
+      options: [
+        { label: "个", value: "piece" },
+        { label: "件", value: "item" },
+        { label: "箱", value: "box" },
+        { label: "套", value: "set" },
+        { label: "公斤", value: "kg" },
+      ],
+      ui: {
+        label: "单位",
+      },
+    },
+    {
+      name: "weight",
+      component: "Number",
+      defaultValue: 0,
+      colSpan: { xs: 6, md: 3 },
+      ui: {
+        label: "重量",
+        min: 0,
+      },
+    },
+    {
+      name: "weightUnit",
+      component: "Select",
+      defaultValue: "kg",
+      colSpan: { xs: 6, md: 3 },
+      options: [
+        { label: "克 (g)", value: "g" },
+        { label: "千克 (kg)", value: "kg" },
+        { label: "磅 (lb)", value: "lb" },
+      ],
+      ui: {
+        label: "重量单位",
+      },
+    },
+  ],
+};
+
+// ============================================================================
 // Tab Panel 组件
 // ============================================================================
 
@@ -1943,7 +2641,7 @@ export const SchemaFormExample: React.FC = () => {
     {
       title: "5. 验证规则",
       description:
-        "演示多种验证方式：Valibot 直接验证、rulesToValibot 声明式规则转换",
+        "演示多种验证方式：Valibot 直接验证、预设规则数组 [{type:'xxx'}]、rulesToValibot 声明式规则",
       schema: validationSchema,
       defaultValues: {},
     },
@@ -1975,6 +2673,23 @@ export const SchemaFormExample: React.FC = () => {
         emailNotification: true,
         pushNotification: true,
         smsNotification: false,
+      },
+    },
+    {
+      title: "9. 组合表单",
+      description:
+        "演示复合输入组件：电话号码（区号+手机号）、价格（货币+金额）、日期范围、尺寸输入等。支持两种实现方式：Custom 组件和 Group 组合",
+      schema: compositeSchema,
+      defaultValues: {
+        phone: { areaCode: "+86", number: "" },
+        price: { currency: "CNY", amount: "" },
+        dateRange: { start: "", end: "" },
+        dimensions: { length: "", width: "", height: "", unit: "cm" },
+        country: "CN",
+        quantity: 1,
+        unit: "piece",
+        weight: 0,
+        weightUnit: "kg",
       },
     },
   ];

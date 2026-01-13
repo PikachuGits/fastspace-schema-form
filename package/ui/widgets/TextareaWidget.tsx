@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { TextField } from "@mui/material";
+import { TextField, type TextFieldProps } from "@mui/material";
 import { FieldAdapter, type WidgetProps } from "../FieldAdapter";
 import { compactFieldStyles } from "./styles";
 import { renderLabel } from "./utils";
@@ -14,6 +14,9 @@ export type TextareaWidgetRenderProps = WidgetProps & {
   helperText?: string;
   rows?: number;
   maxRows?: number;
+  maxLength?: number;
+  inputProps?: Record<string, any>;
+  slotProps?: TextFieldProps["slotProps"];
 };
 
 export type TextareaWidgetProps = {
@@ -39,8 +42,25 @@ export const TextareaWidgetRender = memo(function TextareaWidgetRender({
   helperText,
   rows = 4,
   maxRows,
+  maxLength,
+  inputProps,
+  slotProps,
 }: TextareaWidgetRenderProps) {
   if (!visible) return null;
+
+  // 使用 minRows + maxRows 实现自动扩展，避免 rows + maxRows 冲突警告
+  // 当设置了 maxRows 时，使用 minRows 替代 rows
+  const textFieldProps = maxRows
+    ? { minRows: rows, maxRows }
+    : { rows };
+
+  const mergedInputSlotProps = {
+    ...(inputProps ?? {}),
+    inputProps: {
+      ...(inputProps as any)?.inputProps,
+      ...(maxLength === undefined ? {} : { maxLength }),
+    },
+  };
 
   return (
     <TextField
@@ -55,10 +75,13 @@ export const TextareaWidgetRender = memo(function TextareaWidgetRender({
       error={!!error}
       helperText={error || helperText}
       multiline
-      rows={rows}
-      maxRows={maxRows}
+      {...textFieldProps}
       size="small"
       sx={compactFieldStyles}
+      slotProps={{
+        input: mergedInputSlotProps,
+        ...slotProps,
+      }}
     />
   );
 });

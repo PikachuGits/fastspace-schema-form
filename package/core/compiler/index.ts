@@ -10,6 +10,7 @@ import type {
 } from "../../types";
 import { safeEvaluator } from "./evaluator";
 import { DependencyAnalyzer } from "./dependencyAnalyzer";
+import { resolveValidate } from "../validation/presets";
 
 // ============================================================================
 // SemVer 工具函数
@@ -176,11 +177,16 @@ export class SchemaCompiler {
       depRules.sort((a, b) => a.priority - b.priority);
     }
 
-    // 5. 输出警告信息
-    if (report.warnings.length > 0) {
-      report.warnings.forEach((warning) =>
-        console.warn(`[SchemaCompiler] ${warning}`)
-      );
+    // 5. 输出警告信息 (仅在开发模式下输出 info 级别日志，避免控制台噪音)
+    if (process.env.NODE_ENV === "development" && report.warnings.length > 0) {
+      report.warnings.forEach((warning) => {
+        // 循环依赖是严重问题，使用 warn；其他信息性警告使用 info
+        if (warning.includes("Cyclic dependencies")) {
+          console.warn(`[SchemaCompiler] ${warning}`);
+        } else {
+          console.info(`[SchemaCompiler] ${warning}`);
+        }
+      });
     }
 
     return {
@@ -269,6 +275,11 @@ export class SchemaCompiler {
       } else {
         // 字段 (Field)
         // 1. 注册字段
+        // 自动转换预设规则数组为 valibot schema
+        const resolvedValidate = resolveValidate(field.validate, {
+          label: field.ui?.label as string | undefined,
+        });
+
         fieldsMap[fieldPath] = {
           name: fieldPath,
           component: field.component,
@@ -281,7 +292,7 @@ export class SchemaCompiler {
             // 静态 options 直接放入 props (作为 fallback，Runtime 设置的 meta.options 优先)
             ...(Array.isArray(field.options) ? { options: field.options } : {}),
           },
-          validate: field.validate,
+          validate: resolvedValidate,
         };
 
         // 2. 提取规则
@@ -335,17 +346,14 @@ export class SchemaCompiler {
     options:
       | any[]
       | ((scope: EvalScope, signal?: AbortSignal) => Promise<any[]>)
+      | { fetcher: (scope: EvalScope, signal?: AbortSignal) => Promise<any[]>; deps: string[] }
       | undefined,
     rules: SchemaRule[]
   ) {
     if (!options) return;
 
     if (Array.isArray(options)) {
-      // 静态选项，直接作为默认值或初始状态？
-      // 我们生成一个同步的 derive 规则，或者直接在 Runtime 初始化时注入 meta
-      // 为了统一，我们生成一个总是返回该数组的 derive rule?
-      // 不，Options 应该存储在 meta.options 中。
-      // 我们可以生成一个 effect 类型的规则，或者 options 类型的规则。
+      // 静态选项
       rules.push({
         type: "options",
         target,
@@ -354,18 +362,28 @@ export class SchemaCompiler {
         priority: 0,
       });
     } else if (typeof options === "function") {
-      // 异步函数
-      // 无法自动推断 deps，暂时假设无依赖或由用户负责
-      // 这是一个 limitation，同 compute function。
-      // 理想情况下应该支持 { fetcher: ..., deps: [...] }
-      console.warn(
-        `Async options for ${target} cannot be statically analyzed for dependencies.`
-      );
+      // 异步函数（无依赖追踪）
+      // 仅在开发模式下输出 info 级别日志
+      if (process.env.NODE_ENV === "development") {
+        console.info(
+          `[SchemaCompiler] Async options for "${target}" has no deps. Consider using { fetcher, deps } format for cascade select.`
+        );
+      }
       rules.push({
         type: "options",
         target,
-        deps: [], // TODO: Manual deps
+        deps: [],
         fetcher: options as any,
+        priority: 0,
+      });
+    } else if (typeof options === "object" && "fetcher" in options) {
+      // 异步选项 + 手动依赖（推荐用于级联选择）
+      const { fetcher, deps = [] } = options;
+      rules.push({
+        type: "options",
+        target,
+        deps,
+        fetcher: fetcher as any,
         priority: 0,
       });
     }
@@ -390,9 +408,12 @@ export class SchemaCompiler {
       // 为了安全和性能，V3 计划推荐 字符串表达式 或 带 deps 的对象配置
       // 这里为了兼容简单写法，暂时无法提取 deps。
       // TODO: SchemaInput should support { expr, deps } object
-      console.warn(
-        `Function definition for ${target} cannot be statically analyzed for dependencies.`
-      );
+      // 仅在开发模式下输出 info 级别日志
+      if (process.env.NODE_ENV === "development") {
+        console.info(
+          `[SchemaCompiler] Function definition for "${target}" cannot be statically analyzed for dependencies.`
+        );
+      }
     } else {
       // 字符串表达式
       evaluator = safeEvaluator.compile(definition);

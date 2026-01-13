@@ -69,6 +69,24 @@ export {
   type RulesAdapterOptions,
 } from "./core/validation/rulesAdapter";
 
+export {
+  // 预设注册表
+  createValidationRegistry,
+  globalValidationRegistry,
+  defaultRuleFactories,
+  // 快捷函数
+  presetToSchema,
+  registerPresetRule,
+  overridePresetRule,
+  isPresetRulesArray,
+  // 类型
+  type RuleConfig,
+  type RuleFactory,
+  type PresetRuleName,
+  type PresetRule,
+  type ValidationPresetRegistry,
+} from "./core/validation/presets";
+
 // ============================================================================
 // React Integration
 // ============================================================================
@@ -79,6 +97,15 @@ export {
 } from "./react/useSchemaForm";
 
 export { SchemaFormProvider, useRuntime } from "./react/SchemaFormProvider";
+
+export {
+  useValidationPresets,
+  useValidationPresetsContext,
+  ValidationPresetsProvider,
+  type UseValidationPresetsOptions,
+  type UseValidationPresetsReturn,
+  type ValidationPresetsProviderProps,
+} from "./react/useValidationPresets";
 
 // ============================================================================
 // UI Components - SchemaForm & Renderer
@@ -106,7 +133,11 @@ export {
 // UI Components - Layout
 // ============================================================================
 export { LayoutRenderer, type LayoutRendererProps } from "./ui/layout";
-export { LayoutContext, useLayoutContext, type LayoutContextType } from "./ui/layout/LayoutContext";
+export {
+  LayoutContext,
+  useLayoutContext,
+  type LayoutContextType,
+} from "./ui/layout/LayoutContext";
 
 // ============================================================================
 // UI Components - Widgets
@@ -216,4 +247,5 @@ export type {
   CompiledSchema,
   SchemaInput,
   SchemaField,
+  AsyncOptionsConfig,
 } from "./types";

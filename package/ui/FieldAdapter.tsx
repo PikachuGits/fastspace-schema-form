@@ -1,6 +1,7 @@
-import React, { memo, useCallback, useSyncExternalStore } from 'react';
+import React, { memo, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useRuntime } from '../react/SchemaFormProvider';
 import { valibotValidator } from '../core/validation/valibotAdapter';
+import { isPresetRulesArray, presetToSchema, type PresetRule } from '../core/validation/presets';
 import type { FieldMeta } from '../core/runtime/EffectSystem';
 import type { LayoutNode } from '../types';
 
@@ -41,7 +42,12 @@ export interface WidgetProps {
 export type FieldAdapterProps = {
     form: AnyFormApi;
     name: string;
-    validate?: any; // Valibot schema
+    /**
+     * 校验规则
+     * - Valibot schema: 直接使用 valibot 校验
+     * - PresetRule[]: 预设规则数组，格式为 [{type: 'required', message: '必填'}, {type: 'email'}]
+     */
+    validate?: any | PresetRule[];
     render: (props: WidgetProps) => React.ReactNode;
     /** 额外的 props 透传 */
     fieldProps?: Record<string, any>;
@@ -84,7 +90,7 @@ function useFieldMeta(fieldName: string): FieldMeta | undefined {
  * 特性:
  * - Selector Subscription: 细粒度订阅减少重渲染
  * - Runtime Meta 集成: 自动读取 visible/disabled/required
- * - Validation 集成: 支持 Valibot schema
+ * - Validation 集成: 支持 Valibot schema 和预设规则数组
  */
 export const FieldAdapter = memo(function FieldAdapter({
     form,
@@ -97,16 +103,25 @@ export const FieldAdapter = memo(function FieldAdapter({
 
     // 从 Runtime 获取 Meta 状态
     const meta = useFieldMeta(name);
-   
-    // 转换 validator
-    const validators = React.useMemo(() => {
+
+    // 转换 validator - 支持预设规则数组和 valibot schema
+    const validators = useMemo(() => {
         if (!validate) return undefined;
-        const validatorFn = valibotValidator(validate);
+
+        // 检测是否是预设规则数组 [{type: 'required'}, {type: 'email'}]
+        let schema = validate;
+        if (isPresetRulesArray(validate)) {
+            // 从 fieldProps 获取 label 用于错误消息
+            const label = fieldProps?.label || name;
+            schema = presetToSchema(validate, { label });
+        }
+
+        const validatorFn = valibotValidator(schema);
         return {
             onChange: validatorFn,
             onBlur: validatorFn,
         };
-    }, [validate]);
+    }, [validate, fieldProps?.label, name]);
 
     // 如果不可见，直接返回 null
     if (meta?.isVisible === false) {
@@ -132,8 +147,33 @@ export const FieldAdapter = memo(function FieldAdapter({
                 const isRequired = meta?.isRequired ?? state.meta?.isRequired ?? false;
                 const options = meta?.options ?? state.meta?.options ?? [];
 
-                // 获取错误信息
-                const error = state.meta?.errors?.[0] ?? meta?.error;
+                // 获取错误信息 - 根据字段状态智能选择错误源
+                // TanStack Form 的 errorMap 按验证事件类型分隔错误
+                const errorMap = state.meta?.errorMap;
+                const isDirty = state.meta?.isDirty;
+                
+                // errorMap 的值可能是字符串或数组
+                const getFirstError = (err: unknown): string | undefined => {
+                    if (!err) return undefined;
+                    if (typeof err === 'string') return err;
+                    if (Array.isArray(err)) return err[0];
+                    return undefined;
+                };
+                
+                // 根据字段是否被修改来决定显示哪个错误
+                // - 如果字段已修改（isDirty），使用 onChange 验证结果
+                //   （如果 onChange 验证通过，errorMap.onChange 为 undefined，应该清除错误）
+                // - 如果字段未修改但被触摸过，使用 onBlur 验证结果
+                let error: string | undefined;
+                if (isDirty) {
+                    // 字段已修改，只看 onChange 结果
+                    error = getFirstError(errorMap?.onChange);
+                } else {
+                    // 字段未修改，看 onBlur 或 errors
+                    error = getFirstError(errorMap?.onBlur) ?? state.meta?.errors?.[0];
+                }
+                // 最后 fallback 到 runtime meta error
+                error = error ?? meta?.error;
 
                 return render({
                     name,

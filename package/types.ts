@@ -111,6 +111,19 @@ export type SchemaInput = {
     fields: SchemaField[];
 };
 
+/**
+ * 异步选项配置（带依赖）
+ */
+export type AsyncOptionsConfig = {
+    /** 异步获取选项的函数 */
+    fetcher: (scope: EvalScope, signal?: AbortSignal) => Promise<any[]>;
+    /** 
+     * 依赖的字段列表，当这些字段值变化时重新加载选项
+     * @example deps: ['province'] - 当 province 变化时重新加载
+     */
+    deps: string[];
+};
+
 export type SchemaField = {
     name: string;
     component: string;
@@ -122,8 +135,28 @@ export type SchemaField = {
     compute?: string | ((scope: EvalScope) => any);
     /** 校验规则 (Valibot Schema or Adapter) */
     validate?: any;
-    /** 选项配置 (数组 或 异步函数) */
-    options?: any[] | ((scope: EvalScope, signal?: AbortSignal) => Promise<any[]>);
+    /** 
+     * 选项配置
+     * - 数组：静态选项
+     * - 函数：异步选项（无依赖追踪）
+     * - 对象：异步选项 + 手动指定依赖（推荐用于级联选择）
+     * @example
+     * // 静态选项
+     * options: [{ label: '选项1', value: '1' }]
+     * 
+     * // 异步选项（无依赖，仅初始化时加载）
+     * options: async (scope, signal) => fetchOptions()
+     * 
+     * // 异步选项 + 依赖（推荐：依赖变化时重新加载）
+     * options: {
+     *   fetcher: async (scope, signal) => fetchCities(scope.values.province),
+     *   deps: ['province']
+     * }
+     */
+    options?: 
+        | any[] 
+        | ((scope: EvalScope, signal?: AbortSignal) => Promise<any[]>)
+        | AsyncOptionsConfig;
     // 嵌套结构
     children?: SchemaField[];
     /** 栅格布局配置 (MUI Grid size) */

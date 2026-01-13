@@ -59,6 +59,20 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
     }
   };
 
+  // 处理 NaN 和 null/undefined 值，确保传递给 input 的是有效字符串或空字符串
+  const displayValue = value === null || value === undefined || Number.isNaN(value) ? "" : value;
+
+  const mergedSlotProps: TextFieldProps["slotProps"] = {
+    ...slotProps,
+    htmlInput: {
+      ...(min === undefined ? {} : { min }),
+      ...(max === undefined ? {} : { max }),
+      ...(step === undefined ? {} : { step }),
+      ...(slotProps as any)?.htmlInput,
+      ...(inputProps ?? {}),
+    },
+  };
+
   return (
     <TextField
       fullWidth
@@ -66,7 +80,7 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
       size="small"
       label={renderLabel(label, required)}
       placeholder={placeholder}
-      value={value ?? ""}
+      value={displayValue}
       onChange={handleChange}
       onBlur={onBlur}
       disabled={disabled}
@@ -74,13 +88,7 @@ export const NumberWidgetRender = memo(function NumberWidgetRender({
       error={!!error}
       helperText={error || helperText}
       sx={compactFieldStyles}
-      slotProps={{
-        input: {
-          inputProps: { min, max, step },
-          ...inputProps,
-        },
-        ...slotProps,
-      }}
+      slotProps={mergedSlotProps}
     />
   );
 });

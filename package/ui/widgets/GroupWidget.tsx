@@ -24,9 +24,7 @@ export type GroupWidgetRenderProps = WidgetProps & {
 };
 
 export type GroupWidgetProps = {
-  form: any;
-  name: string;
-} & Omit<GroupWidgetRenderProps, keyof WidgetProps>;
+} & GroupWidgetRenderProps;
 
 // ============================================================================
 // 纯渲染组件
@@ -148,10 +146,7 @@ export const GroupWidgetRender = memo(function GroupWidgetRender({
  * ```
  */
 export const GroupWidget: React.FC<GroupWidgetProps> = (props) => {
-  // GroupWidget 不需要 FieldAdapter，因为它本身不是一个表单字段
-  // 它只是一个布局容器
-  return <GroupWidgetRender {...(props as GroupWidgetRenderProps)} />;
+  return <GroupWidgetRender {...props} />;
 };
 
 export default GroupWidgetRender;
-

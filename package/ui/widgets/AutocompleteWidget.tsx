@@ -42,15 +42,17 @@ export type OptionItem = {
   [key: string]: unknown;
 };
 
-/** Suffix 按钮配置 */
+/** Suffix 按钮配置 (替代下拉箭头位置) */
 export type ButtonConfig = {
-  /** 按钮文本 */
-  text?: string;
-  /** 按钮图标 */
+  /**
+   * 按钮图标内容 (默认 AddIcon)
+   * 注意：MUI 会自动用 IconButton 包裹，所以这里只传图标/文本内容，不要传 Button 组件
+   * 例如：<AddIcon /> 或 <Typography>新增</Typography>
+   */
   icon?: React.ReactNode;
   /** 点击回调 */
   onClick: () => void;
-  /** 按钮提示 */
+  /** 按钮提示 (tooltip) */
   tooltip?: string;
   /** 是否禁用 */
   disabled?: boolean;
@@ -789,88 +791,92 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
     ]
   );
 
-  // 处理 suffix 按钮
+  // 处理 suffix 按钮 (替代三角箭头位置)
   const getSuffixConfig = (): ButtonConfig | null => {
     if (!suffixButton) return null;
-    const result = suffixButton(inputValue, hasOptions);
+    // 使用 localInputValue (对本地和远程模式都有效)
+    const result = suffixButton(localInputValue, hasOptions);
     // result 可能是 ButtonConfig | false | null
     if (result === false || result === null || result === undefined)
       return null;
     return result as ButtonConfig;
   };
   const suffixConfig = getSuffixConfig();
-  const showSuffix = !!suffixConfig;
+
+  // 渲染 popup 图标 (suffixButton 替代三角箭头)
+  // 注意：MUI Autocomplete 会用 IconButton 包裹 popupIcon，所以这里只返回图标内容
+  const renderPopupIcon = (): React.ReactNode => {
+    if (!suffixConfig) return undefined; // 使用默认三角箭头
+
+    const { icon, tooltip } = suffixConfig;
+
+    // 只返回图标，MUI 会自动包裹按钮
+    const iconElement = icon || <AddIcon fontSize="small" />;
+
+    // Tooltip 需要一个 ReactElement 子元素，包裹在 span 中确保兼容性
+    return tooltip ? (
+      <Tooltip title={tooltip}>
+        <span style={{ display: "flex", alignItems: "center" }}>
+          {iconElement}
+        </span>
+      </Tooltip>
+    ) : (
+      iconElement
+    );
+  };
+
+  // 获取 popupIndicator 的自定义 props
+  const getPopupIndicatorProps = () => {
+    if (!suffixConfig) return {};
+
+    const { onClick, disabled: btnDisabled } = suffixConfig;
+
+    return {
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onClick();
+      },
+      disabled: btnDisabled,
+      "aria-label": suffixConfig.tooltip || "操作",
+      // 禁用展开时的旋转动画
+      sx: {
+        transform: "none !important",
+        "&.MuiAutocomplete-popupIndicatorOpen": {
+          transform: "none !important",
+        },
+      },
+    };
+  };
 
   // 构建 endAdornment
   const buildEndAdornment = (defaultEndAdornment: React.ReactNode) => {
-    const elements: React.ReactNode[] = [];
+    return (
+      <>
+        {/* Loading 图标 */}
+        {(loading || userLoading) && (
+          <CircularProgress color="inherit" size={20} />
+        )}
 
-    // Loading 图标
-    if (loading || userLoading) {
-      elements.push(
-        <CircularProgress key="loading" color="inherit" size={20} />
-      );
-    }
+        {/* 恢复搜索按钮 */}
+        {cacheSearchKeyword &&
+          cachedKeyword &&
+          !inputValue &&
+          showRestoreHint &&
+          !disabled && (
+            <Tooltip title="恢复上次搜索">
+              <IconButton
+                size="small"
+                onClick={restoreCachedKeyword}
+                sx={{ p: 0.5 }}
+              >
+                <ReplayIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
 
-    // 恢复搜索按钮
-    if (
-      cacheSearchKeyword &&
-      cachedKeyword &&
-      !inputValue &&
-      showRestoreHint &&
-      !disabled
-    ) {
-      elements.push(
-        <Tooltip key="restore" title="恢复上次搜索">
-          <IconButton
-            size="small"
-            onClick={restoreCachedKeyword}
-            sx={{ p: 0.5 }}
-          >
-            <ReplayIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      );
-    }
-
-    // Suffix 按钮
-    if (showSuffix && suffixConfig) {
-      const {
-        text,
-        icon,
-        onClick,
-        tooltip,
-        disabled: btnDisabled,
-      } = suffixConfig;
-      const btn = (
-        <IconButton
-          key="suffix"
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          disabled={btnDisabled}
-          sx={{ p: 0.5 }}
-        >
-          {icon || <AddIcon fontSize="small" />}
-        </IconButton>
-      );
-
-      elements.push(
-        tooltip ? (
-          <Tooltip key="suffix-tooltip" title={tooltip}>
-            {btn}
-          </Tooltip>
-        ) : (
-          btn
-        )
-      );
-    }
-
-    elements.push(defaultEndAdornment);
-
-    return <>{elements}</>;
+        {defaultEndAdornment}
+      </>
+    );
   };
 
   return (
@@ -883,6 +889,7 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       onClose={handleClose}
       options={normalizedOptions}
       loading={loading || userLoading}
+      popupIcon={renderPopupIcon()}
       filterOptions={remoteConfig ? (x) => x : undefined}
       inputValue={remoteConfig ? inputValue : undefined}
       onInputChange={handleInputChange}
@@ -953,26 +960,54 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
           size: "small",
           variant: "outlined",
         },
+        popupIndicator: suffixConfig ? getPopupIndicatorProps() : {},
       }}
-      renderOption={(props, option) => (
-        <li
-          {...props}
-          key={
-            (option as OptionItem).key ?? String((option as OptionItem).value)
-          }
-        >
-          {(option as OptionItem).listLabel ?? (option as OptionItem).label}
-        </li>
-      )}
-      renderValue={(tagValue, getTagProps) =>
-        tagValue.map((option: OptionItem, index: number) => (
-          <Chip
-            label={option.label}
-            {...getTagProps({ index })}
-            key={option.key ?? String(option.value)}
-            size="small"
-          />
-        ))
+      renderOption={(props, option, state) => {
+        // MUI Autocomplete 在 props 中提供 key，需要显式传递给 li 元素
+        // 注意：key 是 React 特殊属性，不能通过 spread 传递
+        const { key, ...restProps } = props as any;
+        // 处理 freeSolo 模式下可能的字符串值
+        const isString = typeof option === "string";
+        const optLabel = isString
+          ? option
+          : (option as OptionItem).listLabel ?? (option as OptionItem).label;
+        const optValue = isString ? option : (option as OptionItem).value;
+        const optKey = isString ? undefined : (option as OptionItem).key;
+        // 确保始终有有效的 key（fallback 到 option.value 或 index）
+        const safeKey = key ?? optKey ?? String(optValue) ?? state.index;
+        return (
+          <li {...restProps} key={safeKey}>
+            {optLabel}
+          </li>
+        );
+      }}
+      renderTags={
+        multiple
+          ? (tagValue, getTagProps) =>
+              Array.isArray(tagValue)
+                ? tagValue.map((option: OptionItem | string, index: number) => {
+                    // getTagProps 返回的对象包含 key，需要解构出来显式传递
+                    const { key, ...tagProps } = getTagProps({ index }) as any;
+                    // 处理 freeSolo 模式下可能的字符串值
+                    const optLabel =
+                      typeof option === "string" ? option : option.label;
+                    const optValue =
+                      typeof option === "string" ? option : option.value;
+                    const optKey =
+                      typeof option === "string" ? undefined : option.key;
+                    // 确保始终有有效的 key
+                    const safeKey = key ?? optKey ?? String(optValue) ?? index;
+                    return (
+                      <Chip
+                        label={optLabel}
+                        {...tagProps}
+                        key={safeKey}
+                        size="small"
+                      />
+                    );
+                  })
+                : null
+          : undefined
       }
       renderInput={(params) => (
         <TextField

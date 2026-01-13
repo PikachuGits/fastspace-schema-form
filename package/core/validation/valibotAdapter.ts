@@ -1,48 +1,61 @@
-import { safeParseAsync, safeParse } from 'valibot';
+import { safeParse } from "valibot";
+import { isPresetRulesArray, presetToSchema } from "./presets";
 
 /**
- * 将 Valibot Schema 转换为 TanStack Form Validator
+ * 将 Valibot Schema 或预设规则数组转换为 TanStack Form Validator
  * 支持同步和异步校验
+ *
+ * @example 支持两种校验格式
+ * ```tsx
+ * // 格式 1: Valibot Schema (高度自定义)
+ * validate: v.pipe(v.string(), v.email('请输入有效邮箱'))
+ *
+ * // 格式 2: 预设规则数组 (简洁声明式)
+ * validate: [
+ *   { type: 'required', message: '必填项' },
+ *   { type: 'email', message: '请输入有效邮箱' },
+ * ]
+ * ```
  */
-export const valibotValidator = (schema: any) => {
-    return ({ value }: { value: any }) => {
-        if (!schema) return undefined;
-        // 尝试解析
-        // TanStack Form 期望返回错误消息字符串或 undefined
-        // 使用同步解析以避免 Promise 被误认为是错误对象
-        const result = safeParse(schema, value);
+export const valibotValidator = (schemaOrRules: any) => {
+  return ({ value }: { value: any }) => {
+    if (!schemaOrRules) return undefined;
 
-        if (result.success) {
-            return undefined;
-        }
+    // 检测是否为预设规则数组，如果是则自动转换
+    const schema = isPresetRulesArray(schemaOrRules)
+      ? presetToSchema(schemaOrRules)
+      : schemaOrRules;
 
-        // 返回第一个错误消息
-        return result.issues[0].message;
-    };
+    // 使用同步解析
+    const result = safeParse(schema, value);
+
+    if (result.success) {
+      return undefined;
+    }
+
+    // 返回第一个错误消息
+    return result.issues[0]?.message;
+  };
 };
 
 /**
  * 表单级校验适配器
  */
-export const valibotFormValidator = (schema: any) => {
-    return ({ value }: { value: any }) => {
-        if (!schema) return undefined;
+export const valibotFormValidator = (schemaOrRules: any) => {
+  return ({ value }: { value: any }) => {
+    if (!schemaOrRules) return undefined;
 
-        const result = safeParse(schema, value);
+    // 检测是否为预设规则数组，如果是则自动转换
+    const schema = isPresetRulesArray(schemaOrRules)
+      ? presetToSchema(schemaOrRules)
+      : schemaOrRules;
 
-        if (result.success) {
-            return undefined;
-        }
+    const result = safeParse(schema, value);
 
-        // 转换 Issues 为 Record<string, string>
-        // TanStack Form onValidate signature returns ValidationError (string | undefined) or map?
-        // form.options.validators.onChange returns ValidationError or Map.
-        // Wait, TanStack Form form validators usually return an object of errors keyed by field, or a general error.
-        // But for field-level validation, we return string.
+    if (result.success) {
+      return undefined;
+    }
 
-        // For form-level validation, it might be different.
-        // Returning a string is treated as a form-level error.
-
-        return result.issues.map(i => i.message).join(', ');
-    };
+    return result.issues.map((i) => i.message).join(", ");
+  };
 };
