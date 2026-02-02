@@ -23,13 +23,8 @@ import {
   SchemaForm,
   type SchemaFormInstance,
   type EvalScope,
+  type SchemaInput,
 } from "@fastspace/schema-form";
-
-// 使用本地类型定义避免 dist 中旧类型的限制
-type SchemaInput = {
-  meta?: { version: string };
-  fields: any[];
-};
 
 // ============================================================================
 // 模拟 API
@@ -109,10 +104,10 @@ async function searchUsers(
 
   const filtered = keyword
     ? allUsers.filter(
-        (u) =>
-          u.label.toLowerCase().includes(keyword.toLowerCase()) ||
-          u.email.toLowerCase().includes(keyword.toLowerCase())
-      )
+      (u) =>
+        u.label.toLowerCase().includes(keyword.toLowerCase()) ||
+        u.email.toLowerCase().includes(keyword.toLowerCase())
+    )
     : allUsers;
 
   const start = (pageNum - 1) * pageSize;
@@ -234,12 +229,12 @@ const asyncOptionsSchema: SchemaInput = {
         fetcher: async (scope: EvalScope, signal?: AbortSignal) => {
           const province = scope.values.province;
           if (!province) return [];
-
           // 模拟网络延迟
           await new Promise((resolve) => setTimeout(resolve, 300));
 
           // 检查是否已取消
           if (signal?.aborted) return [];
+          console.log("province:", citiesByProvince[province]);
 
           return citiesByProvince[province] || [];
         },

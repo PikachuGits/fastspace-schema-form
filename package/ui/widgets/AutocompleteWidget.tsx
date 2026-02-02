@@ -121,6 +121,16 @@ export type AutocompleteWidgetRenderProps = WidgetProps & {
   loading?: boolean;
   /** 远程搜索配置 */
   remoteConfig?: RemoteConfig;
+  /** 指定选项显示文本的字段，默认 "label" */
+  optionLabelProp?: string;
+  /** 指定选项绑定值的字段，默认 "value" */
+  optionValueProp?: string;
+  /** 无数据时下拉面板提示文本 */
+  emptyText?: string;
+  /** 是否显示添加按钮（函数式控制或布尔值） */
+  showAddSuffix?: boolean | SuffixButtonRender;
+  /** 是否显示清空按钮 */
+  clearable?: boolean;
   /** Suffix 按钮渲染函数 */
   suffixButton?: SuffixButtonRender;
   /** 添加选项成功回调 */
@@ -366,6 +376,11 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   autoSelectNewOption = false,
   refreshOnOpen = false,
   searchClearConfig = {},
+  optionLabelProp = "label",
+  optionValueProp = "value",
+  emptyText,
+  showAddSuffix,
+  clearable,
 }: AutocompleteWidgetRenderProps) {
   if (!visible) return null;
 
@@ -430,9 +445,30 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   const hasOptions = filteredOptionsCount > 0;
 
   // 规范化选项
-  const normalizedOptions = currentOptions.map((opt) =>
-    typeof opt === "object" ? opt : { label: String(opt), value: opt }
-  );
+  const normalizedOptions = React.useMemo(() => {
+    return currentOptions.map((opt) => {
+      if (typeof opt === "object" && opt !== null) {
+        const rawValue = (opt as any)[optionValueProp] ?? (opt as any).value;
+        const normalizedValue =
+          rawValue === null || rawValue === undefined
+            ? null
+            : typeof rawValue === "string" ||
+              typeof rawValue === "number" ||
+              typeof rawValue === "boolean"
+              ? rawValue
+              : String(rawValue);
+
+        return {
+          ...opt,
+          label: String(
+            (opt as any)[optionLabelProp] ?? (opt as any).label ?? ""
+          ),
+          value: normalizedValue,
+        };
+      }
+      return { label: String(opt), value: opt };
+    });
+  }, [currentOptions, optionLabelProp, optionValueProp]);
 
   // 更新 selectedOptionsRef：确保选中项不会因搜索而丢失
   useEffect(() => {
@@ -512,8 +548,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
           const currentValues = Array.isArray(value)
             ? value
             : value
-            ? [value]
-            : [];
+              ? [value]
+              : [];
 
           selectedOptionsRef.current.forEach((selectedItem) => {
             if (
@@ -722,7 +758,7 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       hasMore &&
       !fetchError && // 加载失败时不触发
       listboxNode.scrollTop + listboxNode.clientHeight >=
-        listboxNode.scrollHeight - 20
+      listboxNode.scrollHeight - 20
     ) {
       const nextPage = page + 1;
       setPage(nextPage);
@@ -793,13 +829,38 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
 
   // 处理 suffix 按钮 (替代三角箭头位置)
   const getSuffixConfig = (): ButtonConfig | null => {
-    if (!suffixButton) return null;
-    // 使用 localInputValue (对本地和远程模式都有效)
-    const result = suffixButton(localInputValue, hasOptions);
-    // result 可能是 ButtonConfig | false | null
-    if (result === false || result === null || result === undefined)
-      return null;
-    return result as ButtonConfig;
+    // 优先使用 suffixButton
+    if (suffixButton) {
+      const result = suffixButton(localInputValue, hasOptions);
+      if (result) return result as ButtonConfig;
+    }
+
+    // 处理 showAddSuffix
+    if (typeof showAddSuffix === "function") {
+      const result = showAddSuffix(localInputValue, hasOptions);
+      if (result) return result as ButtonConfig;
+    }
+
+    // showAddSuffix 为 boolean true 时，显示默认添加按钮
+    if (showAddSuffix === true) {
+      return {
+        icon: <AddIcon fontSize="small" />,
+        onClick: () => {
+          if (onAddOptionSuccess) {
+            onAddOptionSuccess({} as OptionItem, {
+              isRemote: !!remoteConfig,
+              refreshRemote: remoteConfig
+                ? () => fetchOptions(inputValue, 1, false)
+                : undefined,
+              appendLocalOption,
+            });
+          }
+        },
+        tooltip: "添加选项",
+      };
+    }
+
+    return null;
   };
   const suffixConfig = getSuffixConfig();
 
@@ -889,6 +950,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       onClose={handleClose}
       options={normalizedOptions}
       loading={loading || userLoading}
+      disableClearable={clearable === false}
+      noOptionsText={emptyText || "暂无数据"}
       popupIcon={renderPopupIcon()}
       filterOptions={remoteConfig ? (x) => x : undefined}
       inputValue={remoteConfig ? inputValue : undefined}
@@ -945,15 +1008,15 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
           style: { maxHeight: 260 },
           ...(remoteConfig
             ? {
-                fetchingMore,
-                hasMore,
-                showNoMore: localOptions.length > 0,
-                empty: localOptions.length === 0 && !loading && !fetchingMore,
-                error: fetchError,
-                onRetry: handleRetry,
-                loading,
-                savedScrollTop,
-              }
+              fetchingMore,
+              hasMore,
+              showNoMore: localOptions.length > 0,
+              empty: localOptions.length === 0 && !loading && !fetchingMore,
+              error: fetchError,
+              onRetry: handleRetry,
+              loading,
+              savedScrollTop,
+            }
             : {}),
         } as any,
         chip: {
@@ -984,29 +1047,29 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       renderTags={
         multiple
           ? (tagValue, getTagProps) =>
-              Array.isArray(tagValue)
-                ? tagValue.map((option: OptionItem | string, index: number) => {
-                    // getTagProps 返回的对象包含 key，需要解构出来显式传递
-                    const { key, ...tagProps } = getTagProps({ index }) as any;
-                    // 处理 freeSolo 模式下可能的字符串值
-                    const optLabel =
-                      typeof option === "string" ? option : option.label;
-                    const optValue =
-                      typeof option === "string" ? option : option.value;
-                    const optKey =
-                      typeof option === "string" ? undefined : option.key;
-                    // 确保始终有有效的 key
-                    const safeKey = key ?? optKey ?? String(optValue) ?? index;
-                    return (
-                      <Chip
-                        label={optLabel}
-                        {...tagProps}
-                        key={safeKey}
-                        size="small"
-                      />
-                    );
-                  })
-                : null
+            Array.isArray(tagValue)
+              ? tagValue.map((option: OptionItem | string, index: number) => {
+                // getTagProps 返回的对象包含 key，需要解构出来显式传递
+                const { key, ...tagProps } = getTagProps({ index }) as any;
+                // 处理 freeSolo 模式下可能的字符串值
+                const optLabel =
+                  typeof option === "string" ? option : option.label;
+                const optValue =
+                  typeof option === "string" ? option : option.value;
+                const optKey =
+                  typeof option === "string" ? undefined : option.key;
+                // 确保始终有有效的 key
+                const safeKey = key ?? optKey ?? String(optValue) ?? index;
+                return (
+                  <Chip
+                    label={optLabel}
+                    {...tagProps}
+                    key={safeKey}
+                    size="small"
+                  />
+                );
+              })
+              : null
           : undefined
       }
       renderInput={(params) => (

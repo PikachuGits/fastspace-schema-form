@@ -18,13 +18,11 @@ import {
   Divider,
   Alert,
 } from "@mui/material";
-import { SchemaForm, type SchemaFormInstance } from "@fastspace/schema-form";
-
-// 使用本地类型定义避免 dist 中旧类型的限制
-type SchemaInput = {
-  meta?: { version: string; compatibleWith?: string[] };
-  fields: any[];
-};
+import {
+  SchemaForm,
+  type SchemaFormInstance,
+  type SchemaInput,
+} from "@fastspace/schema-form";
 
 // ============================================================================
 // Schema 定义 - 所有组件类型
@@ -128,10 +126,26 @@ const basicSchema: SchemaInput = {
         { label: "选项三", value: "option3" },
       ],
       ui: {
-        label: "下拉选择 (Select)",
-        placeholder: "请选择",
-        helperText: "单选下拉框",
+        label: "下拉选择 (Select - Unified Autocomplete)",
+        placeholder: "请选择(可搜索)",
+        helperText: "基于 Autocomplete 实现，支持搜索",
         clearable: true, // 可清空
+      },
+    },
+    {
+      name: "customSelect",
+      component: "Select",
+      colSpan: { xs: 12, md: 6 },
+      options: [
+        { name: "自定义选项 1", id: 1 },
+        { name: "自定义选项 2", id: 2 },
+      ],
+      ui: {
+        label: "自定义字段 Select",
+        placeholder: "测试 optionLabelProp",
+        helperText: "optionLabelProp='name', optionValueProp='id'",
+        optionLabelProp: "name",
+        optionValueProp: "id",
       },
     },
     {
