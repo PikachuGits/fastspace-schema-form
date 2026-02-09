@@ -61,7 +61,7 @@ export type FieldAdapterProps = {
  * 订阅 Runtime Meta 状态的 Hook
  * 使用 useSyncExternalStore 实现高效订阅
  */
-function useFieldMeta(fieldName: string): FieldMeta | undefined {
+export function useFieldMeta(fieldName: string): FieldMeta | undefined {
     const runtime = useRuntime();
 
     // 订阅函数
@@ -104,24 +104,56 @@ export const FieldAdapter = memo(function FieldAdapter({
     // 从 Runtime 获取 Meta 状态
     const meta = useFieldMeta(name);
 
-    // 转换 validator - 支持预设规则数组和 valibot schema
-    const validators = useMemo(() => {
-        if (!validate) return undefined;
+    // 读取动态 required 状态 (来自 requiredWhen)
+    const isRequired = meta?.isRequired ?? false;
 
-        // 检测是否是预设规则数组 [{type: 'required'}, {type: 'email'}]
-        let schema = validate;
-        if (isPresetRulesArray(validate)) {
-            // 从 fieldProps 获取 label 用于错误消息
-            const label = fieldProps?.label || name;
-            schema = presetToSchema(validate, { label });
+    // 转换 validator - 支持预设规则数组、valibot schema 和动态 required
+    const validators = useMemo(() => {
+        // 构建基础 validator (来自 validate prop)
+        let baseValidatorFn: ((params: { value: any }) => string | undefined) | undefined;
+
+        if (validate) {
+            // 检测是否是预设规则数组 [{type: 'required'}, {type: 'email'}]
+            let schema = validate;
+            if (isPresetRulesArray(validate)) {
+                // 从 fieldProps 获取 label 用于错误消息
+                const label = fieldProps?.label || name;
+                schema = presetToSchema(validate, { label });
+            }
+            baseValidatorFn = valibotValidator(schema);
         }
 
-        const validatorFn = valibotValidator(schema);
-        return {
-            onChange: validatorFn,
-            onBlur: validatorFn,
+        // 如果没有基础校验且不需要动态 required，则无需创建 validator
+        if (!baseValidatorFn && !isRequired) return undefined;
+
+        // 组合校验函数: 动态 required + 基础校验
+        const combinedValidator = (params: { value: any }) => {
+            // 1. 动态 required 校验 (来自 requiredWhen)
+            if (isRequired) {
+                const val = params.value;
+                if (
+                    val === undefined ||
+                    val === null ||
+                    val === '' ||
+                    (Array.isArray(val) && val.length === 0)
+                ) {
+                    return '此字段为必填项';
+                }
+            }
+
+            // 2. 基础校验 (来自 validate prop)
+            if (baseValidatorFn) {
+                return baseValidatorFn(params);
+            }
+
+            return undefined;
         };
-    }, [validate, fieldProps?.label, name]);
+
+        return {
+            onChange: combinedValidator,
+            onBlur: combinedValidator,
+        };
+    }, [validate, fieldProps?.label, name, isRequired]);
 
     // 如果不可见，直接返回 null
     if (meta?.isVisible === false) {
@@ -144,7 +176,7 @@ export const FieldAdapter = memo(function FieldAdapter({
 
                 // 合并 meta (优先使用 Runtime Meta)
                 const isDisabled = meta?.isDisabled ?? state.meta?.isDisabled ?? false;
-                const isRequired = meta?.isRequired ?? state.meta?.isRequired ?? false;
+                const fieldRequired = isRequired || (state.meta?.isRequired ?? false);
                 const options = meta?.options ?? state.meta?.options ?? [];
 
                 // 获取错误信息 - 根据字段状态智能选择错误源
@@ -183,7 +215,7 @@ export const FieldAdapter = memo(function FieldAdapter({
                     error,
                     disabled: isDisabled,
                     visible: true,
-                    required: isRequired,
+                    required: fieldRequired,
                     options,
                     isDirty: state.meta?.isDirty,
                     isTouched: state.meta?.isTouched,

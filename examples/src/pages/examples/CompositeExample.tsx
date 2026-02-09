@@ -944,7 +944,7 @@ const compositeSchema: SchemaInput = {
 
     // 重量 + 单位
     {
-      name: "weight",
+      name: "weightWithUnit",
       component: "Custom",
       defaultValue: { amount: "", unit: "kg" },
       colSpan: { xs: 12, md: 6 },

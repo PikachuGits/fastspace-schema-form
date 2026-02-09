@@ -389,6 +389,52 @@ export class SchemaCompiler {
     }
   }
 
+  /**
+   * 从函数源码中提取依赖字段 (best-effort)
+   *
+   * 匹配以下模式:
+   * - scope.values.fieldName     (点访问)
+   * - scope.values["fieldName"]  (括号访问)
+   * - scope.values['fieldName']  (括号访问)
+   * - 解构后的 values.fieldName  (如 ({ values }) => values.xxx)
+   *
+   * @param fn 待分析的函数
+   * @param excludeField 排除的字段名 (通常是字段自身，避免自依赖)
+   */
+  private extractDepsFromFunction(
+    fn: (scope: EvalScope) => any,
+    excludeField?: string
+  ): string[] {
+    try {
+      const source = fn.toString();
+      const deps = new Set<string>();
+
+      // 匹配 *.values.fieldName 或独立 values.fieldName (解构场景)
+      // \b 确保 "values" 是一个完整单词 (不会匹配 myvalues.xxx)
+      const dotPattern = /\bvalues\.(\w+)/g;
+      let match;
+      while ((match = dotPattern.exec(source)) !== null) {
+        deps.add(match[1]);
+      }
+
+      // 匹配 values["fieldName"] 或 values['fieldName'] (括号访问)
+      const bracketPattern = /\bvalues\[["'](\w+)["']\]/g;
+      while ((match = bracketPattern.exec(source)) !== null) {
+        deps.add(match[1]);
+      }
+
+      // 排除字段自身，避免自依赖 (derive 规则读取自身值是常见模式，但不应触发自身)
+      if (excludeField) {
+        deps.delete(excludeField);
+      }
+
+      return Array.from(deps);
+    } catch {
+      // 解析失败时返回空依赖 (降级为仅初始化时执行)
+      return [];
+    }
+  }
+
   private extractRule(
     target: string,
     definition: string | ((scope: EvalScope) => any) | undefined,
@@ -403,15 +449,14 @@ export class SchemaCompiler {
 
     if (typeof definition === "function") {
       evaluator = definition;
-      // 函数类型无法静态分析依赖，除非用户显式提供 deps (当前 SchemaInput 尚未支持显式 deps，假设全量或后续改进)
-      // 暂时假设为 [] 或 运行时动态追踪 (Proxy)
-      // 为了安全和性能，V3 计划推荐 字符串表达式 或 带 deps 的对象配置
-      // 这里为了兼容简单写法，暂时无法提取 deps。
-      // TODO: SchemaInput should support { expr, deps } object
-      // 仅在开发模式下输出 info 级别日志
-      if (process.env.NODE_ENV === "development") {
+      // 从函数源码中提取依赖 (best-effort 静态分析)
+      deps = this.extractDepsFromFunction(definition, target);
+
+      if (process.env.NODE_ENV === "development" && deps.length === 0) {
         console.info(
-          `[SchemaCompiler] Function definition for "${target}" cannot be statically analyzed for dependencies.`
+          `[SchemaCompiler] No dependencies extracted from function for "${target}". ` +
+          `The rule will only run on initialization. ` +
+          `Use scope.values.xxx pattern or string expressions for automatic dependency detection.`
         );
       }
     } else {

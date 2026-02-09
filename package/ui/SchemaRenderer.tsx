@@ -1,7 +1,7 @@
 import React, { memo, useMemo, useCallback } from "react";
 import { Grid } from "@mui/material";
 import type { CompiledSchema, LayoutNode, FieldConfig } from "../types";
-import { FieldAdapter, type WidgetProps } from "./FieldAdapter";
+import { FieldAdapter, useFieldMeta, type WidgetProps } from "./FieldAdapter";
 import { defaultWidgets } from "./widgets";
 import { LayoutContext } from "./layout/LayoutContext";
 
@@ -62,6 +62,9 @@ const FieldRenderer = memo(function FieldRenderer({
   readOnly,
   layoutChildren,
 }: FieldRendererProps) {
+  // 订阅字段可见性 Meta，不可见时跳过整个 Grid 渲染（避免空白占位）
+  const meta = useFieldMeta(field.name);
+
   // 获取对应的 Widget
   const Widget = widgets[field.component];
 
@@ -69,6 +72,11 @@ const FieldRenderer = memo(function FieldRenderer({
     console.warn(
       `[SchemaRenderer] Unknown widget type: "${field.component}" for field "${field.name}"`
     );
+    return null;
+  }
+
+  // 不可见时，连 Grid 外壳一起跳过，避免空白占位
+  if (meta?.isVisible === false) {
     return null;
   }
 

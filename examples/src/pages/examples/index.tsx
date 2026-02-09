@@ -35,6 +35,7 @@ const ConditionalExample = lazy(() => import("./ConditionalExample"));
 const AsyncOptionsExample = lazy(() => import("./AsyncOptionsExample"));
 const FormListExample = lazy(() => import("./FormListExample"));
 const CompositeExample = lazy(() => import("./CompositeExample"));
+const FullUsageExample = lazy(() => import("./FullUsageExample"));
 
 // ============================================================================
 // 示例列表配置
@@ -97,6 +98,14 @@ const examples: ExampleItem[] = [
     icon: <ViewModuleIcon />,
     tags: ["Custom", "组合输入", "区号+手机号", "货币+金额"],
     component: CompositeExample,
+  },
+  {
+    key: "full",
+    title: "全量测试页面",
+    description: "汇总所有核心能力，适合真实页面手动验证",
+    icon: <DescriptionIcon />,
+    tags: ["全量", "联动", "校验", "异步", "FormList"],
+    component: FullUsageExample,
   },
 ];
 

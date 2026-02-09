@@ -67,3 +67,12 @@ examples/src/share/Schema/ui/widgets/TextWidget.tsx
 examples/src/share/Schema/ui/widgets/TimeWidget.tsx
 examples/src/share/Schema/ui/widgets/utils.tsx
 .env
+.pnpm-store/
+.idea/
+.vscode/
+.history/
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

@@ -86,6 +86,30 @@ const basicSchema: SchemaInput = {
       },
     },
     {
+      name: "integerNumber",
+      component: "Number",
+      defaultValue: 0,
+      colSpan: { xs: 12, md: 4 },
+      ui: {
+        label: "仅整数 (integer)",
+        helperText: "失焦自动截断小数，如 3.7→3",
+        integer: true,
+        min: 0,
+        max: 999,
+      },
+    },
+    {
+      name: "precisionNumber",
+      component: "Number",
+      colSpan: { xs: 12, md: 4 },
+      ui: {
+        label: "保留2位小数 (precision)",
+        helperText: "失焦四舍五入，如 3.14159→3.14",
+        precision: 2,
+        allowNegative: false,
+      },
+    },
+    {
       name: "slider",
       component: "Slider",
       defaultValue: 50,

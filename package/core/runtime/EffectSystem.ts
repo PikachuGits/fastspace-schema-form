@@ -246,11 +246,27 @@ export class EffectSystem {
     return obj;
   }
 
+  /** 级联触发最大深度 (防止死循环) */
+  private static readonly MAX_CASCADE_DEPTH = 10;
+
   /**
    * 执行批量更新
+   * @param depth 当前级联深度 (用于防止无限循环)
    */
-  private flushUpdates(): void {
+  private flushUpdates(depth = 0): void {
     if (this.pendingRules.size === 0) return;
+
+    // 级联深度保护
+    if (depth > EffectSystem.MAX_CASCADE_DEPTH) {
+      if (this.config.enableTracing) {
+        console.warn(
+          `[EffectSystem] Max cascade depth (${EffectSystem.MAX_CASCADE_DEPTH}) reached, stopping. ` +
+          `This may indicate circular dependencies between derive rules.`
+        );
+      }
+      this.pendingRules.clear();
+      return;
+    }
 
     // 1. 获取不可变快照 (Snapshot)
     // 采用 Deep Freeze 确保规则执行期间无法修改状态
@@ -316,7 +332,23 @@ export class EffectSystem {
     }
 
     // 4. 提交变更到 Form (Batch Commit)
-    this.commitUpdates(updates, metaUpdates);
+    const changedValueFields = this.commitUpdates(updates, metaUpdates);
+
+    // 5. 级联触发：derive 规则修改了字段值后，需要触发下游依赖规则
+    //    例如：province 变化 → city 被 compute 清空 → 需要触发 district 的规则
+    for (const field of changedValueFields) {
+      const affectedRules = this.schema.dependencyMap.get(field);
+      if (affectedRules) {
+        for (const rule of affectedRules) {
+          this.pendingRules.add(rule);
+        }
+      }
+    }
+
+    // 6. 递归处理级联规则 (使用新的快照)
+    if (this.pendingRules.size > 0) {
+      this.flushUpdates(depth + 1);
+    }
   }
 
   /**
@@ -401,10 +433,15 @@ export class EffectSystem {
       .schedule(rule.target, hash, rule.fetcher, scope)
       .then((options) => {
         // 异步更新 Meta Cache
-        const meta = this.metaCache.get(rule.target);
-        if (meta) {
-          meta.options = options;
-        }
+        // 必须创建新对象引用以触发 useSyncExternalStore 重渲染
+        const cached = this.metaCache.get(rule.target);
+        this.metaCache.set(rule.target, {
+          isVisible: true,
+          isDisabled: false,
+          isRequired: false,
+          ...cached,
+          options,
+        });
 
         // 更新 Form Meta
         this.form.setFieldMeta(rule.target, (prev: any) => ({
@@ -456,46 +493,50 @@ export class EffectSystem {
 
   /**
    * 提交变更到 Form
+   * @returns 值发生变化的字段列表 (用于级联触发下游规则)
    */
   private commitUpdates(
     updates: Map<string, any>,
     metaUpdates: Map<string, Partial<FieldMeta>>
-  ): void {
+  ): string[] {
+    const changedValueFields: string[] = [];
+
     // 应用 Values 变更
     for (const [target, value] of updates) {
       // 只有值真正变化时才更新，避免死循环
       const currentValue = this.form.getFieldValue(target);
       if (!this.isEqual(currentValue, value)) {
         this.form.setFieldValue(target, value);
+        changedValueFields.push(target);
       }
     }
 
-    // 收集发生变更的字段以便通知订阅者
-    const changedFields: string[] = [];
+    // 收集发生 Meta 变更的字段以便通知订阅者
+    const changedMetaFields: string[] = [];
 
     // 应用 Meta 变更 (同时更新缓存和 Form)
+    // 重要: 必须创建新对象引用，否则 useSyncExternalStore 的 Object.is() 比较
+    // 会认为快照未变化，导致 React 不触发重渲染
     for (const [target, meta] of metaUpdates) {
-      // 更新缓存
       const cached = this.metaCache.get(target);
-      if (cached) {
-        Object.assign(cached, meta);
-      } else {
-        this.metaCache.set(target, {
-          isVisible: true,
-          isDisabled: false,
-          isRequired: false,
-          ...meta,
-        });
-      }
+      this.metaCache.set(target, {
+        isVisible: true,
+        isDisabled: false,
+        isRequired: false,
+        ...cached,
+        ...meta,
+      });
 
-      changedFields.push(target);
+      changedMetaFields.push(target);
 
       // 更新 Form Meta
       this.form.setFieldMeta(target, (prev: any) => ({ ...prev, ...meta }));
     }
 
-    // 通知订阅者
-    this.notifyListeners(changedFields);
+    // 通知订阅者 (值变更和 Meta 变更的字段都需要通知)
+    this.notifyListeners([...changedValueFields, ...changedMetaFields]);
+
+    return changedValueFields;
   }
 
   /**

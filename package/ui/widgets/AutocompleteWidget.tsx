@@ -227,13 +227,20 @@ const InfiniteAutocompleteListbox = forwardRef<
   // 合并 ref
   React.useImperativeHandle(ref, () => innerRef.current as HTMLUListElement);
 
-  // 恢复滚动位置 (加载更多完成后)
+  // 记录上一次 fetchingMore 状态，用于检测从 true → false 的转换
+  const prevFetchingMoreRef = useRef(false);
+
+  // 恢复滚动位置 (仅在加载更多完成后，即 fetchingMore 从 true → false 时)
   React.useLayoutEffect(() => {
+    const wasFetching = prevFetchingMoreRef.current;
+    prevFetchingMoreRef.current = !!fetchingMore;
+
     if (
+      wasFetching &&
+      !fetchingMore &&
       savedScrollTop !== undefined &&
       savedScrollTop > 0 &&
-      innerRef.current &&
-      !fetchingMore
+      innerRef.current
     ) {
       innerRef.current.scrollTop = savedScrollTop;
     }
@@ -749,8 +756,6 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
   // 滚动加载
   const handleScroll = (event: React.SyntheticEvent) => {
     const listboxNode = event.currentTarget as HTMLElement;
-    // 保存当前滚动位置
-    setSavedScrollTop(listboxNode.scrollTop);
 
     if (
       !loading &&
@@ -760,6 +765,8 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       listboxNode.scrollTop + listboxNode.clientHeight >=
       listboxNode.scrollHeight - 20
     ) {
+      // 仅在即将加载更多时保存滚动位置（避免每次 scroll 都触发 state 更新导致死循环）
+      setSavedScrollTop(listboxNode.scrollTop);
       const nextPage = page + 1;
       setPage(nextPage);
       fetchOptions(inputValue, nextPage, true);
@@ -956,11 +963,15 @@ export const AutocompleteWidgetRender = memo(function AutocompleteWidgetRender({
       filterOptions={remoteConfig ? (x) => x : undefined}
       inputValue={remoteConfig ? inputValue : undefined}
       onInputChange={handleInputChange}
-      getOptionLabel={(option) =>
-        (option as OptionItem)?.label ||
-        String((option as OptionItem)?.value) ||
-        ""
-      }
+      getOptionLabel={(option) => {
+        if (option == null) return "";
+        if (typeof option === "string") return option;
+        return (
+          (option as OptionItem).label ||
+          String((option as OptionItem).value ?? "") ||
+          ""
+        );
+      }}
       isOptionEqualToValue={(option, val) =>
         (option as OptionItem).value === (val as OptionItem).value
       }
